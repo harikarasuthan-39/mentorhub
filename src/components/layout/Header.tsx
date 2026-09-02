@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   Menu,
   X,
+  User,
+  MessageSquare,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -318,6 +320,17 @@ export function Header() {
             )}
           </div>
 
+          {/* Direct Messaging Link */}
+          <Link
+            to="/messages"
+            id="header_messages_link"
+            className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+            aria-label="Direct Messages"
+            title="Advisory & Peer Messages"
+          >
+            <MessageSquare size={18} />
+          </Link>
+
           {/* Notifications Popover */}
           <div className="relative">
             <button
@@ -404,6 +417,14 @@ export function Header() {
                 </div>
 
                 <div className="p-1">
+                  <Link
+                    to="/profile"
+                    id="header_profile_link"
+                    onClick={() => setProfileOpen(false)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                  >
+                    <User size={14} className="text-purple-600" /> My Profile
+                  </Link>
                   <button
                     onClick={() => {
                       setProfileOpen(false);

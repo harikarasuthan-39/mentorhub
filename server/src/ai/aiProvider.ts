@@ -14,7 +14,7 @@ class GeminiProvider implements AiProvider {
 
   private getClient(): GoogleGenAI {
     if (!this.ai) {
-      const apiKey = process.env.GEMINI_API_KEY || env.aiApiKey;
+      const apiKey = env.geminiApiKey || process.env.GEMINI_API_KEY;
       if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
       this.ai = new GoogleGenAI({ apiKey });
     }
@@ -41,18 +41,19 @@ class GeminiProvider implements AiProvider {
 
 class AnthropicProvider implements AiProvider {
   async complete(systemPrompt: string, userPrompt: string): Promise<string> {
-    if (!env.aiApiKey) {
-      throw new Error("AI_API_KEY is not configured");
+    const apiKey = env.anthropicApiKey;
+    if (!apiKey) {
+      throw new Error("ANTHROPIC_API_KEY is not configured");
     }
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": env.aiApiKey,
+        "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: env.aiModel,
+        model: env.aiModel || "claude-3-5-sonnet-20241022",
         max_tokens: 1024,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
@@ -109,7 +110,7 @@ class MockProvider implements AiProvider {
 }
 
 export function getAiProvider(): AiProvider {
-  if (process.env.GEMINI_API_KEY || env.aiProvider === "gemini") return new GeminiProvider();
-  if (env.aiProvider === "anthropic") return new AnthropicProvider();
+  if (env.aiProvider === "anthropic" || (env.anthropicApiKey && !env.geminiApiKey)) return new AnthropicProvider();
+  if (env.aiProvider === "gemini" || env.geminiApiKey) return new GeminiProvider();
   return new MockProvider();
 }

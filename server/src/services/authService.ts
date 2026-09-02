@@ -1,8 +1,7 @@
-import { prisma } from "../config/prisma";
+import { prisma, Role } from "../config/prisma";
 import { hashPassword, comparePassword } from "../utils/password";
 import { signToken } from "../utils/jwt";
 import { ApiError } from "../utils/ApiError";
-import { Role } from "@prisma/client";
 
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email } });
@@ -54,7 +53,7 @@ export async function registerMentorOrHod(input: {
     });
   }
 
-  const token = signToken({ userId: user.id, role: user.role, email: user.email });
+  const token = signToken({ userId: user.id, role: (user as any).role, email: (user as any).email });
   return { token, user: sanitizeUser(user) };
 }
 

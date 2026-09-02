@@ -1,4 +1,4 @@
-import { prisma } from "../config/prisma";
+import { IssueCategory, Severity, prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
 import { JwtPayload } from "../utils/jwt";
 import { requireMentorId, assertMentorOwnsStudent } from "./accessControl";
@@ -6,7 +6,6 @@ import { runMeetingSummaryAgent } from "../ai/meetingSummaryAgent";
 import { calculateRiskScore } from "../ai/riskEngine";
 import { recommendInterventions } from "../ai/interventionAgent";
 import { createNotification } from "./notificationService";
-import { IssueCategory, Severity } from "@prisma/client";
 
 const CONCERN_TO_CATEGORY: Array<{ match: RegExp; category: IssueCategory }> = [
   { match: /attendance/i, category: "ATTENDANCE" },

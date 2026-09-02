@@ -1,7 +1,6 @@
-import { prisma } from "../config/prisma";
+import { NotificationType, prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
 import { JwtPayload } from "../utils/jwt";
-import { NotificationType } from "@prisma/client";
 
 /**
  * Creates an in-app notification. This is the single entry point other services call.
@@ -38,6 +37,12 @@ export async function markAsRead(user: JwtPayload, notificationId: string) {
 
 export async function markAllAsRead(user: JwtPayload) {
   await prisma.notification.updateMany({ where: { userId: user.userId, isRead: false }, data: { isRead: true } });
+}
+
+export async function deleteNotification(user: JwtPayload, notificationId: string) {
+  const notif = await prisma.notification.findUnique({ where: { id: notificationId } });
+  if (!notif || notif.userId !== user.userId) throw ApiError.notFound("Notification not found");
+  return prisma.notification.delete({ where: { id: notificationId } });
 }
 
 export async function broadcastNotification(

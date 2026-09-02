@@ -18,6 +18,7 @@ import reportRoutes from "./routes/reportRoutes";
 import exportRoutes from "./routes/exportRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import departmentRoutes from "./routes/departmentRoutes";
+import messageRoutes from "./routes/messageRoutes";
 
 const app = express();
 
@@ -26,7 +27,7 @@ app.set("trust proxy", 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: true, credentials: true }));
-app.use(compression());
+app.use(compression() as any);
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 if (env.nodeEnv === "development") app.use(morgan("dev"));
@@ -41,7 +42,7 @@ const limiter = rateLimit({
     xForwardedForHeader: false,
   },
 });
-app.use("/api", limiter);
+app.use("/api", limiter as any);
 
 app.get("/api/health", (_req, res) => res.json({ success: true, status: "ok", time: new Date().toISOString() }));
 
@@ -56,6 +57,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/export", exportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/departments", departmentRoutes);
+app.use("/api/messages", messageRoutes);
 
 // Catch unhandled API routes
 app.use("/api/*", notFoundHandler);

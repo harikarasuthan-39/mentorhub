@@ -1,5 +1,4 @@
 import { Request } from "express";
-import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma";
 
 export async function logAudit(
@@ -16,7 +15,7 @@ export async function logAudit(
         action,
         entity,
         entityId,
-        metadata: (metadata as Prisma.InputJsonValue) ?? undefined,
+        metadata: metadata ?? undefined,
         ipAddress: req.ip,
         userAgent: req.headers["user-agent"],
       },

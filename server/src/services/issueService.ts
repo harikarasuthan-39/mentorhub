@@ -63,7 +63,7 @@ export async function createIssue(user: JwtPayload, req: Request, data: Record<s
     },
   });
 
-  await logAudit(req, "Issue Created", "StudentIssue", issue.id, { category: issue.category });
+  await logAudit(req, "Issue Created", "StudentIssue", issue.id, { category: (issue as any).category });
   return issue;
 }
 

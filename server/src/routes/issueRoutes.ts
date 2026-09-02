@@ -6,7 +6,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get("/", issueController.list);
-router.post("/", authorize("MENTOR"), issueController.create);
-router.put("/:id", authorize("MENTOR"), issueController.update);
+router.post("/", authorize("MENTOR", "HOD"), issueController.create);
+router.put("/:id", authorize("MENTOR", "HOD"), issueController.update);
 
 export default router;

@@ -6,7 +6,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get("/", actionController.list);
-router.post("/", authorize("MENTOR"), actionController.create);
-router.put("/:id", authorize("MENTOR"), actionController.update);
+router.post("/", authorize("MENTOR", "HOD"), actionController.create);
+router.put("/:id", authorize("MENTOR", "HOD", "STUDENT"), actionController.update);
 
 export default router;

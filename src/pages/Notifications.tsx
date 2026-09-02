@@ -8,17 +8,31 @@ import {
   Info,
   Calendar,
   Clock,
+  Send,
+  Plus,
+  X,
+  Megaphone,
 } from "lucide-react";
 import { api, apiErrorMessage } from "../api/client";
 import { LoadingState, ErrorState, EmptyState } from "../components/ui/LoadingState";
 import { AppNotification } from "../types";
 import { BackButton } from "../components/ui/BackButton";
+import { useAuth } from "../context/AuthContext";
 
 export default function Notifications() {
+  const { user } = useAuth();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | "unread">("all");
+
+  // Broadcast modal state for Mentors / HOD
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastTitle, setBroadcastTitle] = useState("");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [recipientType, setRecipientType] = useState<"MY_MENTEES" | "ALL_STUDENTS" | "SECTION">("MY_MENTEES");
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
+  const [broadcastSuccess, setBroadcastSuccess] = useState("");
 
   function load() {
     setLoading(true);
@@ -63,6 +77,33 @@ export default function Notifications() {
   const unreadCount = items.filter((n) => !n.isRead).length;
   const filteredItems = items.filter((n) => (filter === "unread" ? !n.isRead : true));
 
+  async function handleSendBroadcast(e: React.FormEvent) {
+    e.preventDefault();
+    if (!broadcastTitle || !broadcastMessage) return;
+    setSendingBroadcast(true);
+    setBroadcastSuccess("");
+    try {
+      const res = await api.post("/notifications/broadcast", {
+        recipientType,
+        title: broadcastTitle,
+        message: broadcastMessage,
+        priority: "IMPORTANT",
+      });
+      setBroadcastSuccess(res.data.message || "Announcement broadcast successfully!");
+      setBroadcastTitle("");
+      setBroadcastMessage("");
+      setTimeout(() => {
+        setShowBroadcastModal(false);
+        setBroadcastSuccess("");
+        load();
+      }, 1200);
+    } catch (err) {
+      setError(apiErrorMessage(err, "Failed to broadcast announcement"));
+    } finally {
+      setSendingBroadcast(false);
+    }
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300 max-w-3xl">
       {/* Header */}
@@ -84,15 +125,108 @@ export default function Notifications() {
           </h1>
         </div>
 
-        {unreadCount > 0 && (
-          <button
-            onClick={markAllRead}
-            className="text-xs font-semibold text-purple-700 hover:text-purple-800 transition-colors flex items-center gap-1.5 self-start sm:self-auto bg-purple-50 hover:bg-purple-100/70 px-3 py-1.5 rounded-xl border border-purple-200 cursor-pointer"
-          >
-            <CheckCheck size={14} /> Mark all read
-          </button>
-        )}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {(user?.role === "MENTOR" || user?.role === "HOD") && (
+            <button
+              onClick={() => setShowBroadcastModal(true)}
+              className="text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl shadow-xs cursor-pointer"
+            >
+              <Megaphone size={14} /> Send Announcement
+            </button>
+          )}
+
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllRead}
+              className="text-xs font-semibold text-purple-700 hover:text-purple-800 transition-colors flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100/70 px-3 py-1.5 rounded-xl border border-purple-200 cursor-pointer"
+            >
+              <CheckCheck size={14} /> Mark all read
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Broadcast Modal */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-md shadow-xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-purple-600 font-display font-bold text-base">
+                <Megaphone size={18} />
+                <span>Broadcast Announcement</span>
+              </div>
+              <button
+                onClick={() => setShowBroadcastModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {broadcastSuccess && (
+              <div className="p-3 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-xl border border-emerald-200 flex items-center gap-2">
+                <CheckCircle2 size={16} /> {broadcastSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleSendBroadcast} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Recipient Audience</label>
+                <select
+                  value={recipientType}
+                  onChange={(e) => setRecipientType(e.target.value as any)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-purple-500 font-medium"
+                >
+                  <option value="MY_MENTEES">Assigned Mentees Cohort</option>
+                  {user?.role === "HOD" && <option value="ALL_STUDENTS">Entire Department Students</option>}
+                  {user?.role === "HOD" && <option value="SECTION">Specific Section / Year</option>}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Announcement Subject</label>
+                <input
+                  required
+                  placeholder="e.g. Mandatory 1:1 Review Session, Resume Deadline"
+                  value={broadcastTitle}
+                  onChange={(e) => setBroadcastTitle(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-purple-500 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Notification Message</label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Details of the announcement, upcoming deadlines, or actionable instructions..."
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-purple-500 font-medium"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcastModal(false)}
+                  className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingBroadcast}
+                  className="px-4 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-xs disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <Send size={13} />
+                  <span>{sendingBroadcast ? "Broadcasting..." : "Send Announcement"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 border-b border-line pb-2">

@@ -23,6 +23,8 @@ import Issues from "./pages/Issues";
 import Actions from "./pages/Actions";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
+import Messages from "./pages/Messages";
+import Profile from "./pages/Profile";
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -74,7 +76,9 @@ export default function App() {
           <Route path="/meetings" element={<Meetings />} />
           <Route path="/issues" element={<Issues />} />
           <Route path="/actions" element={<Actions />} />
+          <Route path="/messages" element={<Messages />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>

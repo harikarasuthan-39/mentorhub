@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken, JwtPayload } from "../utils/jwt";
 import { ApiError } from "../utils/ApiError";
-import { Role } from "@prisma/client";
+import { Role } from "../config/prisma";
 
 declare global {
   namespace Express {

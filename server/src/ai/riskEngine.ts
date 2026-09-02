@@ -1,4 +1,4 @@
-import { RiskLevel } from "@prisma/client";
+import { RiskLevel } from "../config/prisma";
 
 export interface RiskInput {
   attendancePercentage: number;

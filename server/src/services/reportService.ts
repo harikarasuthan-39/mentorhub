@@ -22,7 +22,7 @@ export async function getStudentReport(user: JwtPayload, studentId: string) {
     if (!mentor || mentor.id !== student.mentorId) throw ApiError.forbidden();
   }
 
-  const visibleIssues = student.issues.filter((i) => {
+  const visibleIssues = student.issues.filter((i: any) => {
     if (!i.isRestricted) return true;
     return user.role === "HOD" || user.role === "MENTOR";
   });

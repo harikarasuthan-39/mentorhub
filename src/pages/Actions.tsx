@@ -11,11 +11,14 @@ import {
   Search,
   ArrowRight,
   ListTodo,
+  Plus,
+  X,
+  Send,
 } from "lucide-react";
 import { api, apiErrorMessage } from "../api/client";
 import { LoadingState, ErrorState, EmptyState } from "../components/ui/LoadingState";
 import { Badge } from "../components/ui/Badge";
-import { ActionItem } from "../types";
+import { ActionItem, Student } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { BackButton } from "../components/ui/BackButton";
 
@@ -29,11 +32,21 @@ const STATUS_TONE: Record<string, "neutral" | "success" | "warning" | "danger" |
 export default function Actions() {
   const { user } = useAuth();
   const [actions, setActions] = useState<ActionItem[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
   const [completingId, setCompletingId] = useState<string | null>(null);
+
+  // New task modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [taskTarget, setTaskTarget] = useState<"MY_MENTEES" | "ALL_STUDENTS" | "SINGLE">("MY_MENTEES");
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [taskType, setTaskType] = useState("STUDENT_ACTION");
+  const [targetDate, setTargetDate] = useState("");
+  const [creatingTask, setCreatingTask] = useState(false);
 
   function load() {
     setLoading(true);
@@ -42,6 +55,13 @@ export default function Actions() {
       .then((res) => setActions(res.data.data))
       .catch((err) => setError(apiErrorMessage(err)))
       .finally(() => setLoading(false));
+
+    if (user?.role === "MENTOR" || user?.role === "HOD") {
+      api
+        .get("/students", { params: { pageSize: 100 } })
+        .then((res) => setStudents(res.data.data.items || []))
+        .catch(() => {});
+    }
   }
 
   useEffect(load, [statusFilter]);
@@ -57,6 +77,34 @@ export default function Actions() {
       setError(apiErrorMessage(err, "Failed to complete action item."));
     } finally {
       setCompletingId(null);
+    }
+  }
+
+  async function handleCreateTask(e: React.FormEvent) {
+    e.preventDefault();
+    if (!taskDescription) return;
+    setCreatingTask(true);
+    try {
+      const payload: any = {
+        description: taskDescription,
+        actionType: taskType,
+        targetCompletionDate: targetDate ? new Date(targetDate).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString(),
+      };
+
+      if (taskTarget === "SINGLE") {
+        payload.studentId = selectedStudentId || students[0]?.id;
+      } else {
+        payload.targetType = taskTarget;
+      }
+
+      await api.post("/actions", payload);
+      setShowCreateModal(false);
+      setTaskDescription("");
+      load();
+    } catch (err) {
+      setError(apiErrorMessage(err, "Failed to create task"));
+    } finally {
+      setCreatingTask(false);
     }
   }
 
@@ -92,8 +140,17 @@ export default function Actions() {
           </h1>
         </div>
 
-        {/* Status Breakdown Pills */}
+        {/* Action button & Status Breakdown Pills */}
         <div className="flex items-center gap-2 flex-wrap">
+          {(user?.role === "MENTOR" || user?.role === "HOD") && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl shadow-xs cursor-pointer"
+            >
+              <Plus size={14} /> Assign New Task
+            </button>
+          )}
+
           {overdueCount > 0 && (
             <div className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200/80 flex items-center gap-1.5 text-xs font-semibold text-rose-700">
               <AlertCircle size={13} /> {overdueCount} Overdue
@@ -107,6 +164,113 @@ export default function Actions() {
           </div>
         </div>
       </div>
+
+      {/* Task Creation Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 w-full max-w-md shadow-xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-purple-600 font-display font-bold text-base">
+                <Plus size={18} />
+                <span>Assign Action Task</span>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTask} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Target Assignee(s)</label>
+                <select
+                  value={taskTarget}
+                  onChange={(e) => setTaskTarget(e.target.value as any)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-purple-500 font-medium"
+                >
+                  <option value="MY_MENTEES">All Assigned Mentees</option>
+                  <option value="SINGLE">Individual Student</option>
+                  {user?.role === "HOD" && <option value="ALL_STUDENTS">Entire Department Students</option>}
+                </select>
+              </div>
+
+              {taskTarget === "SINGLE" && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Select Student</label>
+                  <select
+                    value={selectedStudentId}
+                    onChange={(e) => setSelectedStudentId(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-purple-500 font-medium"
+                  >
+                    {students.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.fullName} ({s.registerNumber})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Task Category</label>
+                <select
+                  value={taskType}
+                  onChange={(e) => setTaskType(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-purple-500 font-medium"
+                >
+                  <option value="STUDENT_ACTION">Student Action</option>
+                  <option value="ACADEMIC_REMEDY">Academic Remediation</option>
+                  <option value="SKILL_BUILDING">Skill & Coding Practice</option>
+                  <option value="RESUME_UPDATE">Resume & Placement Prep</option>
+                  <option value="ATTENDANCE_RECOVERY">Attendance Recovery</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Task Description & Deliverable</label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="e.g. Complete LeetCode 15 dynamic programming problems and push to GitHub repository."
+                  value={taskDescription}
+                  onChange={(e) => setTaskDescription(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-purple-500 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Target Due Date</label>
+                <input
+                  type="date"
+                  value={targetDate}
+                  onChange={(e) => setTargetDate(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-purple-500 font-medium"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingTask}
+                  className="px-4 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-xs disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <Send size={13} />
+                  <span>{creatingTask ? "Assigning..." : "Assign Task"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="app-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white/90">
@@ -171,7 +335,7 @@ export default function Actions() {
               }`}
             >
               <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                {user?.role === "MENTOR" && !isCompleted ? (
+                {!isCompleted ? (
                   <button
                     disabled={completingId === a.id}
                     onClick={() => markComplete(a.id)}
@@ -180,10 +344,8 @@ export default function Actions() {
                   >
                     <Circle size={20} />
                   </button>
-                ) : isCompleted ? (
-                  <CheckCircle size={20} className="mt-0.5 text-emerald-600 shrink-0" />
                 ) : (
-                  <Circle size={20} className="mt-0.5 text-slate-300 shrink-0" />
+                  <CheckCircle size={20} className="mt-0.5 text-emerald-600 shrink-0" />
                 )}
 
                 <div className="min-w-0 space-y-1">
@@ -225,7 +387,7 @@ export default function Actions() {
               <div className="flex items-center sm:flex-col sm:items-end justify-between sm:justify-center gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-line">
                 <Badge tone={STATUS_TONE[a.status]}>{a.status.replace("_", " ")}</Badge>
 
-                {user?.role === "MENTOR" && !isCompleted && (
+                {!isCompleted && (
                   <button
                     disabled={completingId === a.id}
                     onClick={() => markComplete(a.id)}

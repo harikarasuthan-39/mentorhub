@@ -1,7 +1,5 @@
-import { PrismaClient, PlacementStatus, InternshipStatus, Severity, IssueCategory, ActionStatus } from "@prisma/client";
+import { prisma, PlacementStatus, InternshipStatus, Severity, IssueCategory, ActionStatus } from "../src/config/prisma";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
 
 const FIRST_NAMES = ["Arun", "Priya", "Karthik", "Divya", "Ram", "Sneha", "Vijay", "Anitha", "Suresh", "Meena",
   "Ravi", "Kavya", "Naveen", "Pooja", "Ganesh", "Lakshmi", "Sathish", "Deepa", "Manoj", "Swathi",

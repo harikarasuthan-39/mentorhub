@@ -46,6 +46,7 @@ class InMemoryPrismaClient {
   notifications: any[] = [];
   reports: any[] = [];
   auditLogs: any[] = [];
+  messages: any[] = [];
 
   constructor() {
     this.seedInitialData();
@@ -367,6 +368,80 @@ class InMemoryPrismaClient {
       entityId: null,
       createdAt: new Date(),
     });
+
+    // Seed direct messages between Student, Mentor, and HOD
+    const mentor1User = this.users.find((u) => u.email === "mentor1@university.edu");
+    const student1User = this.users.find((u) => u.email === "student1@university.edu");
+
+    if (mentor1User && student1User) {
+      this.messages.push(
+        {
+          id: genId("msg"),
+          senderId: mentor1User.id,
+          senderName: "Dr. Priya Raman",
+          senderRole: "MENTOR" as Role,
+          recipientId: student1User.id,
+          recipientName: "Arun Kumar",
+          recipientRole: "STUDENT" as Role,
+          content: "Hello Arun, please make sure you submit your DSA study plan and attendance log before Friday's advisory check-in.",
+          isRead: true,
+          createdAt: new Date(Date.now() - 3600 * 1000 * 24 * 2), // 2 days ago
+        },
+        {
+          id: genId("msg"),
+          senderId: student1User.id,
+          senderName: "Arun Kumar",
+          senderRole: "STUDENT" as Role,
+          recipientId: mentor1User.id,
+          recipientName: "Dr. Priya Raman",
+          recipientRole: "MENTOR" as Role,
+          content: "Good morning Ma'am! I have uploaded the updated LeetCode milestone and completed the DSA module on Trees and Graphs.",
+          isRead: true,
+          createdAt: new Date(Date.now() - 3600 * 1000 * 20), // 20 hours ago
+        },
+        {
+          id: genId("msg"),
+          senderId: mentor1User.id,
+          senderName: "Dr. Priya Raman",
+          senderRole: "MENTOR" as Role,
+          recipientId: student1User.id,
+          recipientName: "Arun Kumar",
+          recipientRole: "STUDENT" as Role,
+          content: "Excellent progress Arun. Let's do a quick 10-minute review during office hours tomorrow at 3:00 PM.",
+          isRead: false,
+          createdAt: new Date(Date.now() - 3600 * 1000 * 2), // 2 hours ago
+        }
+      );
+    }
+
+    if (mentor1User && hodUser) {
+      this.messages.push(
+        {
+          id: genId("msg"),
+          senderId: hodUser.id,
+          senderName: "Dr. Arvind Swamy",
+          senderRole: "HOD" as Role,
+          recipientId: mentor1User.id,
+          recipientName: "Dr. Priya Raman",
+          recipientRole: "MENTOR" as Role,
+          content: "Dr. Priya, please verify that all mid-term mentoring action logs for Year 3 CSE students are finalized for the NAAC audit report.",
+          isRead: true,
+          createdAt: new Date(Date.now() - 3600 * 1000 * 24 * 3),
+        },
+        {
+          id: genId("msg"),
+          senderId: mentor1User.id,
+          senderName: "Dr. Priya Raman",
+          senderRole: "MENTOR" as Role,
+          recipientId: hodUser.id,
+          recipientName: "Dr. Arvind Swamy",
+          recipientRole: "HOD" as Role,
+          content: "Yes Dr. Swamy, 18 out of 20 mentee logs are complete and submitted. The remaining 2 follow-ups will be finalized by tomorrow noon.",
+          isRead: true,
+          createdAt: new Date(Date.now() - 3600 * 1000 * 24 * 1),
+        }
+      );
+    }
   }
 
   // Model accessors
@@ -382,25 +457,26 @@ class InMemoryPrismaClient {
   notification = this.createModelHandler("notifications");
   report = this.createModelHandler("reports");
   auditLog = this.createModelHandler("auditLogs");
+  message = this.createModelHandler("messages");
 
   private createModelHandler(collectionName: keyof InMemoryPrismaClient) {
     const getCollection = () => this[collectionName] as any[];
 
     return {
-      findUnique: async (args: { where: Record<string, any>; include?: Record<string, any>; select?: Record<string, any> }) => {
+      findUnique: async (args: { where: Record<string, any>; include?: Record<string, any>; select?: Record<string, any> }): Promise<any> => {
         const item = getCollection().find((r) => matchWhere(r, args.where));
         if (!item) return null;
         return this.hydrateRelations(collectionName as string, item, args.include, args.select);
       },
 
-      findFirst: async (args: { where?: Record<string, any>; include?: Record<string, any>; select?: Record<string, any>; orderBy?: any }) => {
+      findFirst: async (args: { where?: Record<string, any>; include?: Record<string, any>; select?: Record<string, any>; orderBy?: any }): Promise<any> => {
         let items = getCollection().filter((r) => (args.where ? matchWhere(r, args.where) : true));
         if (args.orderBy) items = sortItems(items, args.orderBy);
         if (items.length === 0) return null;
         return this.hydrateRelations(collectionName as string, items[0], args.include, args.select);
       },
 
-      findMany: async (args?: { where?: Record<string, any>; include?: Record<string, any>; select?: Record<string, any>; orderBy?: any; skip?: number; take?: number }) => {
+      findMany: async (args?: { where?: Record<string, any>; include?: Record<string, any>; select?: Record<string, any>; orderBy?: any; skip?: number; take?: number }): Promise<any[]> => {
         let items = getCollection().filter((r) => (args?.where ? matchWhere(r, args.where) : true));
         if (args?.orderBy) items = sortItems(items, args.orderBy);
         if (args?.skip !== undefined) items = items.slice(args.skip);
@@ -408,11 +484,11 @@ class InMemoryPrismaClient {
         return items.map((it) => this.hydrateRelations(collectionName as string, it, args?.include, args?.select));
       },
 
-      count: async (args?: { where?: Record<string, any> }) => {
+      count: async (args?: { where?: Record<string, any> }): Promise<number> => {
         return getCollection().filter((r) => (args?.where ? matchWhere(r, args.where) : true)).length;
       },
 
-      create: async (args: { data: Record<string, any> }) => {
+      create: async (args: { data: Record<string, any> }): Promise<any> => {
         const item = {
           id: args.data.id || genId(collectionName.slice(0, 3)),
           createdAt: new Date(),
@@ -423,16 +499,16 @@ class InMemoryPrismaClient {
         return item;
       },
 
-      update: async (args: { where: Record<string, any>; data: Record<string, any> }) => {
+      update: async (args: { where: Record<string, any>; data: Record<string, any>; include?: Record<string, any>; select?: Record<string, any> }): Promise<any> => {
         const index = getCollection().findIndex((r) => matchWhere(r, args.where));
         if (index === -1) throw new Error("Record not found for update");
         const existing = getCollection()[index];
         const updated = { ...existing, ...args.data, updatedAt: new Date() };
         getCollection()[index] = updated;
-        return updated;
+        return this.hydrateRelations(collectionName as string, updated, args.include, args.select);
       },
 
-      updateMany: async (args: { where: Record<string, any>; data: Record<string, any> }) => {
+      updateMany: async (args: { where: Record<string, any>; data: Record<string, any> }): Promise<{ count: number }> => {
         let count = 0;
         const col = getCollection();
         for (let i = 0; i < col.length; i++) {

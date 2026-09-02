@@ -158,8 +158,47 @@ export async function createStudent(user: JwtPayload, data: Record<string, any>)
 }
 
 export async function updateStudent(user: JwtPayload, studentId: string, data: Record<string, any>) {
-  if (user.role === "STUDENT") throw ApiError.forbidden("Students cannot edit student records");
-  await getStudentById(user, studentId); // ensures scoped access
+  if (user.role === "STUDENT") {
+    const student = await prisma.student.findUnique({ where: { userId: user.userId } });
+    if (!student || student.id !== studentId) {
+      throw ApiError.forbidden("You can only edit your own student profile");
+    }
+
+    // Permitted fields for student self-service edit
+    const allowedFields = [
+      "phone",
+      "address",
+      "city",
+      "state",
+      "zipCode",
+      "emergencyContactName",
+      "emergencyContactRelation",
+      "emergencyContactPhone",
+      "parentName",
+      "parentContact",
+      "careerGoal",
+      "targetRole",
+      "skills",
+      "certifications",
+      "githubUrl",
+      "linkedinUrl",
+      "portfolioUrl",
+      "resumeUrl",
+      "bio",
+      "interests",
+    ];
+
+    const payload: Record<string, unknown> = {};
+    for (const key of allowedFields) {
+      if (data[key] !== undefined) {
+        payload[key] = data[key];
+      }
+    }
+
+    return prisma.student.update({ where: { id: studentId }, data: payload });
+  }
+
+  await getStudentById(user, studentId); // ensures scoped access for mentors/hod
 
   const payload: Record<string, unknown> = { ...data };
   if (data.dateOfBirth) payload.dateOfBirth = new Date(data.dateOfBirth);

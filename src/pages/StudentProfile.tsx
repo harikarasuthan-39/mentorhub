@@ -226,7 +226,7 @@ export default function StudentProfile() {
                   hint="Schedule a 1:1 meeting with this mentee to document progress and concerns."
                 />
               ) : (
-                student.meetings.map((m) => (
+                student.meetings?.map((m) => (
                   <div
                     key={m.id}
                     className="border border-line rounded-xl p-5 hover:border-brand-200 transition-colors bg-white space-y-3"
@@ -295,7 +295,7 @@ export default function StudentProfile() {
                   icon={<FileCheck size={32} className="text-emerald-500" />}
                 />
               ) : (
-                student.issues.map((i) => (
+                student.issues?.map((i) => (
                   <div
                     key={i.id}
                     className="border border-line rounded-xl p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4 bg-white"
@@ -330,7 +330,7 @@ export default function StudentProfile() {
                   hint="Create actionable follow-up commitments from your mentoring sessions."
                 />
               ) : (
-                student.actionItems.map((a) => (
+                student.actionItems?.map((a) => (
                   <div
                     key={a.id}
                     className="border border-line rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white"
@@ -358,7 +358,7 @@ export default function StudentProfile() {
                   hint="AI risk seals are automatically computed when sessions and grades are submitted."
                 />
               ) : (
-                student.riskAssessments.map((r) => (
+                student.riskAssessments?.map((r) => (
                   <div
                     key={r.id}
                     className="border border-line rounded-xl p-5 bg-white space-y-4 shadow-xs"

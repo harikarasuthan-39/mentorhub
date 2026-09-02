@@ -114,14 +114,16 @@ export async function updateAction(user: JwtPayload, req: Request, actionId: str
     if (!student || action.studentId !== student.id) {
       throw ApiError.forbidden("You can only update status of your own assigned tasks");
     }
-    // Student can only update status (e.g. IN_PROGRESS, COMPLETED)
-    const allowedStatuses = ["PENDING", "IN_PROGRESS", "COMPLETED"];
+    // Student can update status (e.g. IN_PROGRESS, SUBMITTED, COMPLETED), progress, and remarks
+    const allowedStatuses = ["PENDING", "IN_PROGRESS", "SUBMITTED", "COMPLETED"];
     if (data.status && !allowedStatuses.includes(data.status)) {
       throw ApiError.badRequest("Invalid status");
     }
     const payload: Record<string, unknown> = {
       status: data.status || action.status,
     };
+    if (data.progress !== undefined) payload.progress = Math.max(0, Math.min(100, Number(data.progress)));
+    if (data.remarks !== undefined) payload.remarks = String(data.remarks);
     if (data.status === "COMPLETED") payload.completedDate = new Date();
 
     const updated = await prisma.actionItem.update({ where: { id: actionId }, data: payload });

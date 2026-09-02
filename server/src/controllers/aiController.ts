@@ -11,6 +11,7 @@ export const chatWithMentorAI = asyncHandler(async (req: Request, res: Response)
   const { messages, studentContext } = req.body;
   const result = await runMentorChatAgent({
     messages: Array.isArray(messages) ? messages : [],
+    userRole: req.user?.role,
     studentContext,
   });
   res.json({ success: true, data: result });
