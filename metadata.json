@@ -1,0 +1,8 @@
+{
+  "name": "MentorHUB",
+  "description": "Google-grade AI university mentoring & student advisory intelligence hub with real-time risk analytics, meeting minutes, and automated action roadmap.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

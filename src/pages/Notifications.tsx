@@ -1,0 +1,212 @@
+import { useEffect, useState } from "react";
+import {
+  Trash2,
+  CheckCheck,
+  Bell,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
+  Calendar,
+  Clock,
+} from "lucide-react";
+import { api, apiErrorMessage } from "../api/client";
+import { LoadingState, ErrorState, EmptyState } from "../components/ui/LoadingState";
+import { AppNotification } from "../types";
+import { BackButton } from "../components/ui/BackButton";
+
+export default function Notifications() {
+  const [items, setItems] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState<"all" | "unread">("all");
+
+  function load() {
+    setLoading(true);
+    api
+      .get("/notifications")
+      .then((res) => setItems(res.data.data))
+      .catch((err) => setError(apiErrorMessage(err)))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(load, []);
+
+  async function markRead(id: string) {
+    try {
+      await api.put(`/notifications/${id}/read`);
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, isRead: true } : item))
+      );
+    } catch {
+      load();
+    }
+  }
+
+  async function markAllRead() {
+    try {
+      await api.put("/notifications/read-all");
+      setItems((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    } catch {
+      load();
+    }
+  }
+
+  async function remove(id: string) {
+    try {
+      await api.delete(`/notifications/${id}`);
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch {
+      load();
+    }
+  }
+
+  const unreadCount = items.filter((n) => !n.isRead).length;
+  const filteredItems = items.filter((n) => (filter === "unread" ? !n.isRead : true));
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 max-w-3xl">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <BackButton fallback="/dashboard" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Activity & Alerts
+            </span>
+            {unreadCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                {unreadCount} Unread
+              </span>
+            )}
+          </div>
+          <h1 className="font-display text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
+            Notification Center
+          </h1>
+        </div>
+
+        {unreadCount > 0 && (
+          <button
+            onClick={markAllRead}
+            className="text-xs font-semibold text-purple-700 hover:text-purple-800 transition-colors flex items-center gap-1.5 self-start sm:self-auto bg-purple-50 hover:bg-purple-100/70 px-3 py-1.5 rounded-xl border border-purple-200 cursor-pointer"
+          >
+            <CheckCheck size={14} /> Mark all read
+          </button>
+        )}
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 border-b border-line pb-2">
+        <button
+          onClick={() => setFilter("all")}
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            filter === "all"
+              ? "bg-navy text-gold shadow-xs"
+              : "text-slate-muted hover:text-navy hover:bg-slate-100"
+          }`}
+        >
+          All Activity ({items.length})
+        </button>
+        <button
+          onClick={() => setFilter("unread")}
+          className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            filter === "unread"
+              ? "bg-navy text-gold shadow-xs"
+              : "text-slate-muted hover:text-navy hover:bg-slate-100"
+          }`}
+        >
+          Unread Only ({unreadCount})
+        </button>
+      </div>
+
+      {error && <ErrorState message={error} onRetry={load} />}
+      {loading && !error && <LoadingState label="Loading your notification feed..." />}
+      {!loading && filteredItems.length === 0 && (
+        <EmptyState
+          title="All caught up"
+          hint={filter === "unread" ? "You have no unread notifications." : "No activity notifications logged yet."}
+          icon={<Bell size={32} className="text-slate-400" />}
+        />
+      )}
+
+      {/* List */}
+      <div className="space-y-3">
+        {filteredItems.map((n) => {
+          const isWarning =
+            n.title.toLowerCase().includes("risk") ||
+            n.title.toLowerCase().includes("overdue") ||
+            n.title.toLowerCase().includes("urgent");
+
+          return (
+            <div
+              key={n.id}
+              className={`app-card p-4 md:p-5 flex items-start justify-between gap-4 transition-all duration-200 border-l-4 ${
+                !n.isRead
+                  ? isWarning
+                    ? "border-l-rose-500 bg-rose-50/20"
+                    : "border-l-brand-600 bg-brand-50/20"
+                  : "border-l-transparent"
+              }`}
+            >
+              <div className="flex items-start gap-3.5 min-w-0">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                    isWarning
+                      ? "bg-rose-100 text-rose-700"
+                      : !n.isRead
+                      ? "bg-brand-100 text-brand-700"
+                      : "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {isWarning ? <AlertTriangle size={16} /> : <Info size={16} />}
+                </div>
+
+                <div className="min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className={`text-sm ${!n.isRead ? "font-bold text-navy" : "font-semibold text-slate-700"}`}>
+                      {n.title}
+                    </p>
+                    {!n.isRead && (
+                      <span className="w-2 h-2 rounded-full bg-brand-600 shrink-0" />
+                    )}
+                  </div>
+
+                  <p className="text-xs text-slate-muted leading-relaxed">
+                    {n.message}
+                  </p>
+
+                  <p className="text-[11px] text-slate-400 flex items-center gap-1 pt-1">
+                    <Clock size={11} />
+                    {new Date(n.createdAt).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                {!n.isRead && (
+                  <button
+                    onClick={() => markRead(n.id)}
+                    className="text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors px-2 py-1 rounded-lg hover:bg-brand-50 cursor-pointer"
+                  >
+                    Mark read
+                  </button>
+                )}
+                <button
+                  onClick={() => remove(n.id)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                  title="Delete notification"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+

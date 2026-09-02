@@ -1,0 +1,345 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  HOD
+  MENTOR
+  STUDENT
+}
+
+enum MeetingType {
+  INDIVIDUAL
+  GROUP
+}
+
+enum IssueCategory {
+  ACADEMIC_PERFORMANCE
+  ATTENDANCE
+  ARREAR_SUBJECTS
+  PLACEMENT_READINESS
+  INTERNSHIP_STATUS
+  FINANCIAL_CONCERNS
+  PERSONAL_WELLBEING
+  DISCIPLINE
+  OTHER
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ActionType {
+  STUDENT_ACTION
+  MENTOR_ACTION
+}
+
+enum ActionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum PlacementStatus {
+  NOT_ELIGIBLE
+  ELIGIBLE
+  IN_PROGRESS
+  PLACED
+}
+
+enum InternshipStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum NotificationType {
+  UPCOMING_MEETING
+  FOLLOW_UP
+  OVERDUE_ACTION
+  REPEATED_ISSUE
+  MONTHLY_REMINDER
+  RISK_CHANGE
+  GENERAL
+}
+
+// ---------------------------------------------------------------------------
+// Core entities
+// ---------------------------------------------------------------------------
+
+model Department {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  code      String    @unique
+  createdAt DateTime  @default(now())
+
+  mentors  Mentor[]
+  students Student[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  mentor       Mentor?
+  student      Student?
+  notifications Notification[]
+  auditLogs    AuditLog[]
+
+  @@index([role])
+}
+
+model Mentor {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName     String
+  employeeId   String   @unique
+  designation  String?
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  phone        String?
+  createdAt    DateTime @default(now())
+
+  students     Student[]
+  meetings     Meeting[]
+  issues       StudentIssue[]  @relation("AssignedMentorIssues")
+  actionsAssigned ActionItem[] @relation("MentorAssignedActions")
+  interventions   Intervention[]
+
+  @@index([departmentId])
+}
+
+model Student {
+  id                   String   @id @default(cuid())
+  userId               String?  @unique
+  user                 User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  fullName             String
+  registerNumber       String   @unique
+  year                 String
+  section              String
+  departmentId         String
+  department           Department @relation(fields: [departmentId], references: [id])
+  mentorId             String
+  mentor               Mentor   @relation(fields: [mentorId], references: [id])
+
+  parentName           String?
+  parentContact        String?
+  email                String?
+  phone                String?
+  dateOfBirth          DateTime?
+  admissionYear         Int?
+
+  attendancePercentage Float    @default(100)
+  cgpa                 Float    @default(0)
+  arrearCount          Int      @default(0)
+  placementStatus      PlacementStatus  @default(NOT_ELIGIBLE)
+  internshipStatus     InternshipStatus @default(NOT_STARTED)
+  certificationCount   Int      @default(0)
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  meetings             Meeting[]
+  issues               StudentIssue[]
+  actionItems          ActionItem[]
+  riskAssessments      RiskAssessment[]
+  interventions        Intervention[]
+
+  @@index([mentorId])
+  @@index([departmentId])
+  @@index([registerNumber])
+}
+
+model Meeting {
+  id                  String      @id @default(cuid())
+  studentId           String
+  student             Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mentorId            String
+  mentor              Mentor      @relation(fields: [mentorId], references: [id])
+
+  meetingDate         DateTime
+  meetingType         MeetingType @default(INDIVIDUAL)
+  discussionSummary   String
+  studentConcerns     String?
+  mentorSuggestions   String?
+  nextFollowUpDate    DateTime?
+
+  aiSummary           String?
+  aiKeyConcerns        String[]  @default([])
+  aiImportantPoints    String[]  @default([])
+  aiRecommendedActions String[]  @default([])
+  aiStatus             String   @default("PENDING") // PENDING | COMPLETED | FAILED
+
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  issues              StudentIssue[]
+  actionItems         ActionItem[]
+  riskAssessment      RiskAssessment?
+
+  @@index([studentId])
+  @@index([mentorId])
+  @@index([meetingDate])
+}
+
+model StudentIssue {
+  id              String        @id @default(cuid())
+  studentId       String
+  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  meetingId       String?
+  meeting         Meeting?      @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  mentorId        String
+  mentor          Mentor        @relation("AssignedMentorIssues", fields: [mentorId], references: [id])
+
+  category        IssueCategory
+  description     String
+  severity        Severity      @default(MEDIUM)
+  status          IssueStatus   @default(OPEN)
+  isRestricted    Boolean       @default(false)
+
+  resolution      String?
+  resolvedDate    DateTime?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  actionItems     ActionItem[]
+
+  @@index([studentId])
+  @@index([category])
+  @@index([status])
+}
+
+model ActionItem {
+  id                    String       @id @default(cuid())
+  studentId             String
+  student               Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  meetingId             String?
+  meeting               Meeting?     @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  issueId               String?
+  issue                 StudentIssue? @relation(fields: [issueId], references: [id], onDelete: SetNull)
+  mentorId              String
+  mentor                Mentor       @relation("MentorAssignedActions", fields: [mentorId], references: [id])
+
+  actionType            ActionType   @default(STUDENT_ACTION)
+  description           String
+  assignedTo            String       // free text label: student name / mentor name
+  targetCompletionDate  DateTime
+  status                ActionStatus @default(PENDING)
+  completedDate         DateTime?
+
+  createdAt             DateTime     @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  @@index([studentId])
+  @@index([status])
+  @@index([targetCompletionDate])
+}
+
+model RiskAssessment {
+  id            String    @id @default(cuid())
+  studentId     String
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  meetingId     String?   @unique
+  meeting       Meeting?  @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+
+  riskScore     Int
+  riskLevel     RiskLevel
+  breakdown     Json      // explainable scoring components
+  generatedBy   String    @default("AI") // AI | MANUAL
+
+  createdAt     DateTime  @default(now())
+
+  @@index([studentId])
+  @@index([riskLevel])
+}
+
+model Intervention {
+  id           String   @id @default(cuid())
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mentorId     String
+  mentor       Mentor   @relation(fields: [mentorId], references: [id])
+
+  issueArea    String
+  recommendation String
+  status       String   @default("SUGGESTED") // SUGGESTED | ACCEPTED | DISMISSED | DONE
+
+  createdAt    DateTime @default(now())
+
+  @@index([studentId])
+}
+
+model Notification {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean           @default(false)
+  entityId  String?
+  createdAt DateTime          @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  type        String   // MONTHLY | SEMESTER | STUDENT | MENTOR | ISSUES | ACTIONS
+  title       String
+  filters     Json?
+  generatedBy String
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entity     String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity])
+}
