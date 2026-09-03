@@ -67,59 +67,60 @@ export function Profile() {
     if (!user) return;
     try {
       setLoading(true);
+      const authRes = await api.get("/auth/me");
+      const authUser = authRes.data.data;
+
       if (user.role === "STUDENT") {
         const res = await api.get("/students/me");
         if (res.data.success) {
           const s = res.data.data;
           setProfileData(s);
           setFormData({
-            phone: s.phone || "+91 98765 43210",
-            address: s.address || "14/A, Anna Salai, Gandhipuram",
-            city: s.city || "Coimbatore",
-            state: s.state || "Tamil Nadu",
-            emergencyContactName: s.parentName || "S. Kumar (Father)",
-            emergencyContactRelation: "Father",
-            emergencyContactPhone: s.parentContact || "+91 98421 99887",
-            careerGoal: s.careerGoal || "Full Stack AI Engineer at Tier-1 Product Company",
-            targetRole: s.targetRole || "Software Development Engineer (SDE-1)",
-            skills: Array.isArray(s.skills) ? s.skills.join(", ") : "React, TypeScript, Python, Node.js, PyTorch, SQL, DSA",
-            certifications: Array.isArray(s.certifications) ? s.certifications.join(", ") : "AWS Cloud Practitioner, DeepLearning.AI GenAI Specialization",
-            githubUrl: s.githubUrl || "https://github.com/arunkumar-dev",
-            linkedinUrl: s.linkedinUrl || "https://linkedin.com/in/arunkumar-tech",
-            portfolioUrl: s.portfolioUrl || "https://arunkumar.dev",
-            resumeUrl: s.resumeUrl || "https://drive.google.com/file/d/arun-resume/view",
-            bio: s.bio || "Passionate 3rd-year Computer Science undergraduate focusing on AI applications, full-stack microservices, and distributed systems.",
+            phone: s.phone || "",
+            address: s.address || "",
+            city: s.city || "",
+            state: s.state || "",
+            emergencyContactName: s.parentName || "",
+            emergencyContactRelation: "Parent",
+            emergencyContactPhone: s.parentContact || "",
+            careerGoal: s.careerGoal || "",
+            targetRole: s.targetRole || "",
+            skills: Array.isArray(s.skills) ? s.skills.join(", ") : "",
+            certifications: Array.isArray(s.certifications) ? s.certifications.join(", ") : "",
+            githubUrl: s.githubUrl || "",
+            linkedinUrl: s.linkedinUrl || "",
+            portfolioUrl: s.portfolioUrl || "",
+            resumeUrl: s.resumeUrl || "",
+            bio: s.bio || "",
             specialization: "",
           });
         }
       } else {
         // MENTOR, HOD, or ADMIN
-        const res = await api.get("/dashboard/metrics");
+        const mentor = authUser.mentor;
         const facultyInfo = {
-          fullName: user.role === "HOD" ? "Dr. Arvind Swamy" : "Dr. Priya Raman",
-          employeeId: user.role === "HOD" ? "FAC-HOD-001" : "FAC-CSE-014",
-          designation: user.role === "HOD" ? "Professor & Head of Department" : "Associate Professor & Faculty Advisor",
-          department: "Computer Science & Engineering",
-          departmentCode: "CSE",
-          email: user.email,
-          phone: user.role === "HOD" ? "+91 98420 11223" : "+91 98765 11234",
-          officeAddress: user.role === "HOD" ? "Block 3, Office of the HOD (Room 301)" : "Block 3, Faculty Cabins (Room 214)",
-          qualification: user.role === "HOD" ? "Ph.D. in Distributed Systems & AI (IIT Madras)" : "Ph.D. in Machine Learning & Data Systems (NIT Trichy)",
-          specialization: user.role === "HOD" ? "Cloud Systems, AI Governance, Institutional Accreditation" : "Machine Learning, Deep Learning, Graph Neural Networks",
-          experience: user.role === "HOD" ? "18 Years (Academic & Administrative Leadership)" : "11 Years Teaching & Industry R&D",
-          dateOfJoining: user.role === "HOD" ? "12 April 2010" : "15 June 2015",
-          assignedStudentsCount: user.role === "HOD" ? 450 : 20,
-          activeMeetingsCount: res.data?.data?.totalMeetings || 18,
-          bio: user.role === "HOD"
-            ? "Dedicated to advancing high-impact engineering pedagogy, NBA/NAAC tier-1 accreditation standards, and industry-partnered AI research labs."
-            : "Mentoring undergraduate engineers with a focus on data structures, algorithmic problem solving, and career placement readiness.",
+          fullName: mentor?.fullName || authUser.email?.split("@")[0] || "Faculty Member",
+          employeeId: mentor?.employeeId || "FAC-STAFF",
+          designation: mentor?.designation || (user.role === "HOD" ? "Head of Department" : "Faculty Advisor"),
+          department: mentor?.department?.name || "Engineering Department",
+          departmentCode: mentor?.department?.code || "DEPT",
+          email: mentor?.email || authUser.email,
+          phone: mentor?.phone || "",
+          officeAddress: mentor?.address || "Faculty Block, Campus Office",
+          qualification: mentor?.qualification || "Ph.D. in Computer Science",
+          specialization: mentor?.specialization || "Computing Systems & Mentoring",
+          experience: "Active Faculty",
+          dateOfJoining: mentor?.createdAt ? new Date(mentor.createdAt).toLocaleDateString() : "Institutional Record",
+          assignedStudentsCount: mentor?.menteeCount || 0,
+          activeMeetingsCount: 0,
+          bio: mentor?.bio || "Committed faculty mentor supporting student academic growth and career readiness.",
         };
         setMentorData(facultyInfo);
         setFormData({
           phone: facultyInfo.phone,
           address: facultyInfo.officeAddress,
-          city: "Coimbatore",
-          state: "Tamil Nadu",
+          city: mentor?.city || "Coimbatore",
+          state: mentor?.state || "Tamil Nadu",
           emergencyContactName: "",
           emergencyContactRelation: "",
           emergencyContactPhone: "",
@@ -195,8 +196,8 @@ export function Profile() {
 
   const isStudent = user?.role === "STUDENT";
   const name = isStudent
-    ? profileData?.fullName || "Arun Kumar"
-    : mentorData?.fullName || (user?.role === "HOD" ? "Dr. Arvind Swamy" : "Dr. Priya Raman");
+    ? profileData?.fullName || user?.email?.split("@")[0] || "Student"
+    : mentorData?.fullName || user?.email?.split("@")[0] || "Faculty Member";
 
   const email = user?.email || "user@university.edu";
 
@@ -213,11 +214,11 @@ export function Profile() {
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
               {isStudent ? (
                 <>
-                  Reg. No: <span className="font-mono font-semibold text-slate-700">{profileData?.registerNumber || "23CSE101"}</span> • {profileData?.degree || "B.E. Computer Science & Engineering"}
+                  Reg. No: <span className="font-mono font-semibold text-slate-700">{profileData?.registerNumber || "Not assigned"}</span> • {profileData?.degree || "Undergraduate Degree"}
                 </>
               ) : (
                 <>
-                  Employee ID: <span className="font-mono font-semibold text-slate-700">{mentorData?.employeeId || "FAC-CSE-014"}</span> • {mentorData?.department || "Computer Science & Engineering"}
+                  Employee ID: <span className="font-mono font-semibold text-slate-700">{mentorData?.employeeId || "FAC-STAFF"}</span> • {mentorData?.department || "Department"}
                 </>
               )}
             </p>
@@ -267,24 +268,8 @@ export function Profile() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
               {/* Round Profile Picture - Top Layer above banner */}
               <div className="relative z-10 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-lg bg-slate-900 flex items-center justify-center shrink-0 overflow-hidden ring-1 ring-slate-200/80">
-                <img
-                  src={
-                    isStudent
-                      ? "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80"
-                      : user?.role === "HOD"
-                      ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80"
-                      : "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80"
-                  }
-                  alt={name}
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    // Fallback to stylized initial badge if image fails
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
                 <span className="font-bold text-2xl sm:text-3xl text-white select-none">
-                  {name.charAt(0)}
+                  {name.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="sm:pt-4 space-y-1">
@@ -298,7 +283,7 @@ export function Profile() {
                 </div>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium">
                   {isStudent
-                    ? `${profileData?.degree || "B.E. Computer Science & Engineering"} • Year ${profileData?.year || "III"}, Sec ${profileData?.section || "A"}`
+                    ? `${profileData?.degree || "Undergraduate"} • Year ${profileData?.year || "III"}, Sec ${profileData?.section || "A"}`
                     : mentorData?.designation || "Faculty Advisor"}
                 </p>
               </div>
@@ -325,7 +310,7 @@ export function Profile() {
                     Register Number
                   </p>
                   <p className="font-bold text-slate-800 text-sm sm:text-base mt-1 font-mono">
-                    {profileData?.registerNumber || "23CSE101"}
+                    {profileData?.registerNumber || "Not provided"}
                   </p>
                 </div>
                 <div className="flex flex-col justify-center sm:px-4 pt-2 sm:pt-0">
@@ -333,7 +318,8 @@ export function Profile() {
                     Cumulative CGPA
                   </p>
                   <p className="font-bold text-emerald-600 text-sm sm:text-base mt-1">
-                    {profileData?.cgpa || 8.4} <span className="text-xs text-slate-400 font-normal">/ 10.0</span>
+                    {profileData?.cgpa !== undefined && profileData?.cgpa !== null ? `${profileData.cgpa} ` : "Not available "}
+                    <span className="text-xs text-slate-400 font-normal">/ 10.0</span>
                   </p>
                 </div>
                 <div className="flex flex-col justify-center sm:px-4 pt-2 sm:pt-0">
@@ -341,7 +327,7 @@ export function Profile() {
                     Attendance Rate
                   </p>
                   <p className="font-bold text-purple-600 text-sm sm:text-base mt-1">
-                    {profileData?.attendancePercentage || 88}%
+                    {profileData?.attendancePercentage !== undefined ? `${profileData.attendancePercentage}%` : "Not available"}
                   </p>
                 </div>
                 <div className="flex flex-col justify-center sm:px-4 pt-2 sm:pt-0">
@@ -362,7 +348,7 @@ export function Profile() {
                     Employee ID
                   </p>
                   <p className="font-bold text-slate-800 text-sm sm:text-base mt-1 font-mono">
-                    {mentorData?.employeeId || "FAC-CSE-001"}
+                    {mentorData?.employeeId || "FAC-STAFF"}
                   </p>
                 </div>
                 <div className="flex flex-col justify-center sm:px-4 pt-2 sm:pt-0">
@@ -370,7 +356,7 @@ export function Profile() {
                     Department
                   </p>
                   <p className="font-bold text-purple-700 text-sm sm:text-base mt-1">
-                    {mentorData?.department || "Computer Science"}
+                    {mentorData?.department || "Department"}
                   </p>
                 </div>
                 <div className="flex flex-col justify-center sm:px-4 pt-2 sm:pt-0">
@@ -378,7 +364,7 @@ export function Profile() {
                     Assigned Mentees
                   </p>
                   <p className="font-bold text-slate-800 text-sm sm:text-base mt-1">
-                    {mentorData?.assignedStudentsCount || 20} <span className="text-xs text-slate-500 font-normal">Students</span>
+                    {mentorData?.assignedStudentsCount ?? 0} <span className="text-xs text-slate-500 font-normal">Students</span>
                   </p>
                 </div>
                 <div className="flex flex-col justify-center sm:px-4 pt-2 sm:pt-0">
@@ -386,7 +372,7 @@ export function Profile() {
                     Experience
                   </p>
                   <p className="font-bold text-slate-800 text-sm sm:text-base mt-1">
-                    {mentorData?.experience || "11 Years"}
+                    {mentorData?.experience || "Active"}
                   </p>
                 </div>
               </div>

@@ -22,6 +22,7 @@ import { RiskDot } from "../components/ui/RiskSeal";
 import { LoadingState, ErrorState } from "../components/ui/LoadingState";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { WelcomeIntroBanner } from "../components/ui/WelcomeIntroBanner";
 
 export default function MentorDashboard() {
   const { user } = useAuth();
@@ -43,6 +44,8 @@ export default function MentorDashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      <WelcomeIntroBanner />
+
       {/* Top Banner / Hero Greeting */}
       <div className="p-6 md:p-7 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-xs relative overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">

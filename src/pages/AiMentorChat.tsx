@@ -34,24 +34,24 @@ interface Message {
 
 const STARTER_PROMPTS = [
   {
-    icon: FileCode,
-    label: "Python Skills",
-    query: "I want to improve my Python skills for technical interviews and placement tests.",
-  },
-  {
     icon: Target,
-    label: "Placement Prep",
-    query: "How should I prepare for campus placements and software engineering rounds?",
+    label: "Check My Stats",
+    query: "What is my current CGPA and attendance?",
   },
   {
-    icon: Calendar,
-    label: "Semester Study Plan",
-    query: "Build an optimal weekly study schedule for my current semester courses.",
+    icon: FileCode,
+    label: "Python Guidance",
+    query: "I want to improve my Python skills for technical interviews.",
   },
   {
     icon: Lightbulb,
-    label: "Resume & Projects",
-    query: "What high-impact project should I build to boost my resume for AI/Cloud roles?",
+    label: "Explain Concept",
+    query: "What is recursion and can you show an example?",
+  },
+  {
+    icon: Calendar,
+    label: "Career Advice",
+    query: "I'm feeling a bit confused about my career path.",
   },
 ];
 
@@ -61,15 +61,8 @@ export default function AiMentorChat() {
     {
       id: "init-1",
       role: "assistant",
-      content: `### 👋 Hi ${user?.email?.split("@")[0] || "there"}! I'm your MentorHUB AI Assistant.\n\nI provide personalized guidance across **Academics**, **Skill Development**, **Exam Roadmaps**, and **Career Placements**.\n\nWhat would you like help with today? You can select a starter prompt below or ask me any question about your studies!`,
+      content: `Hey ${user?.email?.split("@")[0] || "there"}! 👋 How's it going? I'm here if you want to chat about your studies, code, career plans, or anything on your mind. What are you working on today?`,
       timestamp: "Just now",
-      suggestedActions: [
-        "Review today's study planner",
-        "Practice 2 Python data structure problems",
-        "Check placement eligibility checklist",
-      ],
-      recommendedSkills: ["Python", "FastAPI", "Data Structures", "System Design"],
-      studyTips: ["Break down complex topics into 25-minute focused intervals."],
     },
   ]);
 
@@ -110,22 +103,14 @@ export default function AiMentorChat() {
 
       const res = await api.post("/ai/chat", {
         messages: history,
-        studentContext: {
-          name: user?.email?.split("@")[0] || "Student",
-          department: "Computer Science & Engineering",
-          semester: 6,
-          cgpa: 8.65,
-          attendance: 91,
-          targetRole: "Full Stack AI Engineer",
-          focusSkills: ["Python", "React", "DSA", "Cloud Architecture"],
-        },
       });
 
+      const reply = res.data?.data?.reply || res.data?.reply || res.data?.message;
       const data = res.data?.data;
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         role: "assistant",
-        content: data?.reply || "I am here to guide your academic and career roadmap.",
+        content: reply || "I'm here to help with your studies and career roadmap.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         suggestedActions: data?.suggestedActions,
         recommendedSkills: data?.recommendedSkills,
@@ -133,14 +118,14 @@ export default function AiMentorChat() {
       };
 
       setMessages((prev) => [...prev, botMsg]);
-    } catch {
+    } catch (err: any) {
+      console.error("[AiMentorChat Error]:", err);
+      const serverMsg = err.response?.data?.message || err.response?.data?.error;
       const botMsg: Message = {
         id: `bot-fallback-${Date.now()}`,
         role: "assistant",
-        content: `### 🚀 Action Plan for: "${query}"\n\n1. **Core Concept Mastery**: Solidify theoretical principles with active recall.\n2. **Hands-on Implementation**: Implement practical code examples to build muscle memory.\n3. **Milestone Review**: Sync with your faculty mentor during weekly office hours to validate progress.`,
+        content: serverMsg || `I had trouble reaching the server for a moment. Could you try asking again? I'm ready to help!`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        suggestedActions: ["Add milestone to Study Planner", "Review faculty feedback notes"],
-        recommendedSkills: ["Python", "DSA", "System Design"],
       };
       setMessages((prev) => [...prev, botMsg]);
     } finally {

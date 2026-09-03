@@ -24,6 +24,7 @@ import { api, apiErrorMessage } from "../api/client";
 import { LoadingState, ErrorState } from "../components/ui/LoadingState";
 import { useAuth } from "../context/AuthContext";
 import { StatCard } from "../components/ui/StatCard";
+import { WelcomeIntroBanner } from "../components/ui/WelcomeIntroBanner";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -78,6 +79,8 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      <WelcomeIntroBanner />
+
       {/* Top Banner / Hero Card */}
       <div className="p-5 sm:p-6 md:p-7 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-xs relative overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
@@ -195,37 +198,37 @@ export default function StudentDashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
           <StatCard
             label="Cumulative GPA"
-            value="8.65"
+            value={data.student?.cgpa !== undefined && data.student?.cgpa !== null ? String(data.student.cgpa) : "N/A"}
             icon={<Award size={14} />}
             accent="navy"
-            subtext="Top 5% in Dept"
+            subtext={data.student?.cgpa >= 8.5 ? "First Class with Distinction" : "In Good Standing"}
             onClick={() => navigate("/progress")}
             compact
           />
           <StatCard
             label="Attendance"
-            value="91.4%"
+            value={data.student?.attendancePercentage !== undefined ? `${data.student.attendancePercentage}%` : "N/A"}
             icon={<CheckCircle2 size={14} />}
-            accent="risk-low"
-            subtext="Safe threshold"
+            accent={data.student?.attendancePercentage < 75 ? "risk-high" : "risk-low"}
+            subtext={data.student?.attendancePercentage >= 75 ? "Above 75% threshold" : "Below 75% minimum"}
             onClick={() => navigate("/progress")}
             compact
           />
           <StatCard
             label="Active Arrears"
-            value="0"
+            value={data.student?.arrearCount !== undefined ? String(data.student.arrearCount) : "0"}
             icon={<ShieldCheck size={14} />}
-            accent="risk-low"
-            subtext="Clean record"
+            accent={data.student?.arrearCount > 0 ? "risk-high" : "risk-low"}
+            subtext={data.student?.arrearCount === 0 ? "Clean academic record" : "Immediate attention"}
             onClick={() => navigate("/progress")}
             compact
           />
           <StatCard
             label="Placement Readiness"
-            value="86%"
+            value={data.student?.placementStatus ? data.student.placementStatus.replace(/_/g, " ") : "NOT ELIGIBLE"}
             icon={<Target size={14} />}
-            accent="blue"
-            subtext="Tier-1 Ready"
+            accent={data.student?.placementStatus === "ELIGIBLE" || data.student?.placementStatus === "PLACED" ? "blue" : "navy"}
+            subtext={`${data.student?.certificationCount || 0} Certifications`}
             onClick={() => navigate("/career-guidance")}
             compact
           />
@@ -335,11 +338,18 @@ export default function StudentDashboard() {
                   <span>Academic Standing</span>
                   <Award size={15} className="text-purple-600" />
                 </div>
-                <p className="font-display text-xl font-bold text-slate-900">8.65 CGPA</p>
+                <p className="font-display text-xl font-bold text-slate-900">
+                  {data.student?.cgpa !== undefined ? `${data.student.cgpa} CGPA` : "Not evaluated"}
+                </p>
                 <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-600 rounded-full w-[86%]" />
+                  <div
+                    className="h-full bg-purple-600 rounded-full"
+                    style={{ width: `${Math.min(100, (Number(data.student?.cgpa || 0) / 10) * 100)}%` }}
+                  />
                 </div>
-                <p className="text-[11px] text-emerald-700 font-medium">Attendance: 91.4% (Safe)</p>
+                <p className={`text-[11px] font-medium ${data.student?.attendancePercentage < 75 ? "text-rose-700" : "text-emerald-700"}`}>
+                  Attendance: {data.student?.attendancePercentage ?? 0}% ({data.student?.attendancePercentage < 75 ? "Critical" : "Safe"})
+                </p>
               </div>
 
               {/* Skill Progress */}
@@ -348,11 +358,18 @@ export default function StudentDashboard() {
                   <span>Skill Mastery</span>
                   <Code2 size={15} className="text-purple-600" />
                 </div>
-                <p className="font-display text-xl font-bold text-slate-900">7 Verified Tracks</p>
+                <p className="font-display text-xl font-bold text-slate-900">
+                  {data.student?.skills?.length || 0} Competencies
+                </p>
                 <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-slate-700 rounded-full w-[78%]" />
+                  <div
+                    className="h-full bg-slate-700 rounded-full"
+                    style={{ width: `${Math.min(100, ((data.student?.skills?.length || 0) / 6) * 100)}%` }}
+                  />
                 </div>
-                <p className="text-[11px] text-slate-600 font-medium truncate">Python, DSA, React, FastAPI</p>
+                <p className="text-[11px] text-slate-600 font-medium truncate">
+                  {data.student?.skills?.length > 0 ? data.student.skills.slice(0, 3).join(", ") : "Add target skills in Profile"}
+                </p>
               </div>
 
               {/* Career Readiness */}
@@ -361,11 +378,25 @@ export default function StudentDashboard() {
                   <span>Career Readiness</span>
                   <Compass size={15} className="text-purple-600" />
                 </div>
-                <p className="font-display text-xl font-bold text-slate-900">86 / 100</p>
+                <p className="font-display text-xl font-bold text-slate-900">
+                  {data.student?.placementStatus ? data.student.placementStatus.replace(/_/g, " ") : "In Progress"}
+                </p>
                 <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-600 rounded-full w-[86%]" />
+                  <div
+                    className="h-full bg-purple-600 rounded-full"
+                    style={{
+                      width:
+                        data.student?.placementStatus === "PLACED"
+                          ? "100%"
+                          : data.student?.placementStatus === "ELIGIBLE"
+                          ? "85%"
+                          : "40%",
+                    }}
+                  />
                 </div>
-                <p className="text-[11px] text-emerald-700 font-medium">Placement Eligible</p>
+                <p className="text-[11px] text-emerald-700 font-medium">
+                  {data.student?.targetRole || "Software Engineer"}
+                </p>
               </div>
             </div>
           </div>

@@ -24,6 +24,7 @@ import { RiskDot } from "../components/ui/RiskSeal";
 import { LoadingState, ErrorState } from "../components/ui/LoadingState";
 import { Department, Mentor } from "../types";
 import { Link, useNavigate } from "react-router-dom";
+import { WelcomeIntroBanner } from "../components/ui/WelcomeIntroBanner";
 
 export default function HodDashboard() {
   const navigate = useNavigate();
@@ -64,6 +65,8 @@ export default function HodDashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      <WelcomeIntroBanner />
+
       {/* Top Banner / Executive Overview */}
       <div className="p-6 md:p-7 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-xs relative overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">

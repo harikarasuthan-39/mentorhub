@@ -469,11 +469,11 @@ class InMemoryPrismaClient {
         return this.hydrateRelations(collectionName as string, item, args.include, args.select);
       },
 
-      findFirst: async (args: { where?: Record<string, any>; include?: Record<string, any>; select?: Record<string, any>; orderBy?: any }): Promise<any> => {
-        let items = getCollection().filter((r) => (args.where ? matchWhere(r, args.where) : true));
-        if (args.orderBy) items = sortItems(items, args.orderBy);
+      findFirst: async (args?: { where?: Record<string, any>; include?: Record<string, any>; select?: Record<string, any>; orderBy?: any }): Promise<any> => {
+        let items = getCollection().filter((r) => (args?.where ? matchWhere(r, args.where) : true));
+        if (args?.orderBy) items = sortItems(items, args.orderBy);
         if (items.length === 0) return null;
-        return this.hydrateRelations(collectionName as string, items[0], args.include, args.select);
+        return this.hydrateRelations(collectionName as string, items[0], args?.include, args?.select);
       },
 
       findMany: async (args?: { where?: Record<string, any>; include?: Record<string, any>; select?: Record<string, any>; orderBy?: any; skip?: number; take?: number }): Promise<any[]> => {
@@ -644,6 +644,22 @@ class InMemoryPrismaClient {
         let intList = this.interventions.filter((i) => i.studentId === res.id);
         if (include.interventions.orderBy) intList = sortItems(intList, include.interventions.orderBy);
         res.interventions = intList;
+      }
+      if (include.students) {
+        let sList = this.students.filter((s) => s.mentorId === res.id || s.departmentId === res.id);
+        if (include.students.include?.riskAssessments) {
+          sList = sList.map((st) => {
+            let risks = this.riskAssessments.filter((r) => r.studentId === st.id);
+            if (include.students.include.riskAssessments.orderBy) risks = sortItems(risks, include.students.include.riskAssessments.orderBy);
+            if (include.students.include.riskAssessments.take) risks = risks.slice(0, include.students.include.riskAssessments.take);
+            return { ...st, riskAssessments: risks };
+          });
+        }
+        res.students = sList;
+      }
+      if (include.mentors) {
+        let mList = this.mentors.filter((m) => m.departmentId === res.id);
+        res.mentors = mList;
       }
     }
 

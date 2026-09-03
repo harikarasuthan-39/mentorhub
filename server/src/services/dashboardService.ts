@@ -122,25 +122,53 @@ export async function getHodDashboard(user: JwtPayload, filters: { departmentId?
 export async function getStudentDashboard(user: JwtPayload) {
   const student = await prisma.student.findUnique({
     where: { userId: user.userId },
-    include: { mentor: { select: { fullName: true, phone: true } } },
+    include: {
+      mentor: { select: { id: true, fullName: true, phone: true, email: true, designation: true } },
+      department: true,
+    },
   });
-  if (!student) throw ApiError.forbidden();
+  if (!student) throw ApiError.forbidden("No student profile found for this user");
 
-  const [upcomingMeeting, actions, latestMeeting] = await Promise.all([
+  const [upcomingMeeting, actions, latestMeeting, latestRisk] = await Promise.all([
     prisma.meeting.findFirst({
       where: { studentId: student.id, nextFollowUpDate: { gte: new Date() } },
       orderBy: { nextFollowUpDate: "asc" },
     }),
     prisma.actionItem.findMany({ where: { studentId: student.id }, orderBy: { targetCompletionDate: "asc" } }),
     prisma.meeting.findFirst({ where: { studentId: student.id }, orderBy: { meetingDate: "desc" } }),
+    prisma.riskAssessment.findFirst({ where: { studentId: student.id }, orderBy: { createdAt: "desc" } }),
   ]);
 
   return {
+    student: {
+      id: student.id,
+      fullName: student.fullName,
+      registerNumber: student.registerNumber,
+      year: student.year,
+      section: student.section,
+      semester: student.semester,
+      degree: student.degree,
+      departmentName: student.department?.name,
+      departmentCode: student.department?.code,
+      cgpa: student.cgpa,
+      attendancePercentage: student.attendancePercentage,
+      arrearCount: student.arrearCount,
+      placementStatus: student.placementStatus,
+      internshipStatus: student.internshipStatus,
+      certificationCount: student.certificationCount,
+      skills: student.skills || [],
+      certifications: student.certifications || [],
+      careerGoal: student.careerGoal,
+      targetRole: student.targetRole,
+    },
     myMentor: student.mentor,
     upcomingFollowUp: upcomingMeeting?.nextFollowUpDate ?? null,
     pendingActions: actions.filter((a: { status: string }) => a.status === "PENDING" || a.status === "IN_PROGRESS"),
     completedActions: actions.filter((a: { status: string }) => a.status === "COMPLETED"),
+    allActions: actions,
+    latestMeeting,
     mentorSuggestions: latestMeeting?.mentorSuggestions ?? null,
+    latestRisk,
   };
 }
 

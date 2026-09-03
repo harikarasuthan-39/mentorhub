@@ -71,6 +71,31 @@ export async function listStudents(user: JwtPayload, filters: StudentListFilters
   return { items: mapped, total, page, pageSize };
 }
 
+export async function getStudentByUserId(userId: string) {
+  const student = await prisma.student.findUnique({
+    where: { userId },
+    include: {
+      department: true,
+      mentor: { select: { id: true, fullName: true, employeeId: true, phone: true, email: true, designation: true } },
+      riskAssessments: { orderBy: { createdAt: "desc" }, take: 5 },
+      meetings: { orderBy: { meetingDate: "desc" }, take: 10 },
+      issues: { orderBy: { createdAt: "desc" }, take: 10 },
+      actionItems: { orderBy: { targetCompletionDate: "asc" }, take: 15 },
+    },
+  });
+  if (!student) throw ApiError.notFound("Student record not found for this user account");
+
+  const maskedAccountNumber = student.accountNumber
+    ? `XXXX XXXX ${String(student.accountNumber).slice(-4)}`
+    : null;
+
+  const { accountNumber, ...safeStudent } = student;
+  return {
+    ...safeStudent,
+    maskedAccountNumber,
+  };
+}
+
 export async function getStudentById(user: JwtPayload, studentId: string) {
   const where = await scopedWhere(user, {});
   const student = await prisma.student.findFirst({

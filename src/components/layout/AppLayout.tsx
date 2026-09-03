@@ -3,10 +3,12 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { OfflineBanner } from "../ui/OfflineBanner";
 
 export function AppLayout() {
   return (
     <div className="min-h-screen bg-surface flex flex-col font-body">
+      <OfflineBanner />
       <div className="flex flex-1 min-h-0">
         <div className="hidden md:block">
           <Sidebar />

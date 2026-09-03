@@ -13,9 +13,11 @@ import {
   X,
   User,
   MessageSquare,
+  Sparkles,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useIntro } from "../../context/IntroContext";
 import { api } from "../../api/client";
 import { AppNotification, Student } from "../../types";
 import { RiskDot } from "../ui/RiskSeal";
@@ -48,19 +50,33 @@ const DEMO_USERS = [
 
 export function Header() {
   const { user, logout, login } = useAuth();
+  const { openIntro } = useIntro();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isSearchLayerOpen, setIsSearchLayerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Student[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard shortcut ⌘K / Ctrl+K and Escape
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchLayerOpen((prev) => !prev);
+      }
+      if (e.key === "Escape" && isSearchLayerOpen) {
+        setIsSearchLayerOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isSearchLayerOpen]);
 
   useEffect(() => {
     api
@@ -75,9 +91,6 @@ export function Header() {
         setOpen(false);
         setProfileOpen(false);
         setSwitchOpen(false);
-      }
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setSearchFocused(false);
       }
     }
     document.addEventListener("mousedown", onClickOutside);
@@ -119,174 +132,67 @@ export function Header() {
 
   return (
     <>
-      <header className="h-16 sticky top-0 z-30 bg-white border-b border-slate-200/90 flex items-center justify-between px-3 sm:px-4 md:px-6 transition-all shadow-xs">
-        {/* Mobile Header Elements (< md) */}
-        <div className="flex md:hidden items-center gap-2">
+      <header className="h-16 sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 flex items-center justify-between px-3 sm:px-4 md:px-5 lg:px-6 transition-all shadow-2xs w-full min-w-0">
+        {/* Mobile Brand & Navigation Drawer Trigger (< md) */}
+        <div className="flex md:hidden items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all border border-slate-200/60"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 hover:text-slate-900 active:scale-95 transition-all border border-slate-200/80 shadow-2xs shrink-0 cursor-pointer"
             aria-label="Open Navigation Menu"
           >
-            <Menu size={20} />
+            <Menu size={18} />
           </button>
-          <Link to="/dashboard" className="flex items-center">
-            <MentorHubLogo size="sm" animate={false} />
+          <Link to="/dashboard" className="flex items-center gap-2 focus:outline-none group shrink-0" aria-label="MentorHUB Dashboard">
+            <MentorHubLogo size="xs" animate={false} showTagline={false} />
           </Link>
         </div>
 
-        {/* Desktop Global Search Bar (>= md) */}
-        <div className="hidden md:block relative w-88 max-w-[38vw]" ref={searchRef}>
-          <div className="relative flex items-center">
-            <Search size={15} className="absolute left-3 text-slate-400 pointer-events-none" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchFocused(true)}
-              placeholder="Search students, reg. no, or emails..."
-              className="w-full pl-9 pr-8 py-2 text-xs md:text-sm bg-slate-50 hover:bg-slate-100/60 rounded-xl border border-slate-200/80 focus:outline-none focus:border-purple-600 focus:bg-white focus:ring-3 focus:ring-purple-500/10 transition-all text-slate-900 placeholder:text-slate-400 font-medium"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setSearchFocused(false);
-                  navigate(`/students?search=${encodeURIComponent(searchQuery)}`);
-                }
-              }}
-            />
-            <kbd className="hidden md:inline-flex absolute right-2.5 text-[10px] font-mono text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-2xs">
-              ↵
+        {/* Desktop Quick Search Trigger (>= md) */}
+        <div className="hidden md:flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsSearchLayerOpen(true)}
+            className="flex items-center gap-2 pl-3 pr-2.5 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/90 rounded-xl border border-slate-200/80 text-slate-400 hover:text-slate-600 transition-all cursor-pointer shadow-2xs group"
+            aria-label="Open search layer"
+          >
+            <Search size={14} className="text-slate-400 group-hover:text-purple-600 transition-colors shrink-0" />
+            <span className="font-medium text-slate-500">Search students, reg. no, records...</span>
+            <kbd className="font-mono text-[10px] text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-2xs ml-1 shrink-0">
+              ⌘K
             </kbd>
-          </div>
-
-          {/* Live Search Autocomplete Popover */}
-          {searchFocused && searchQuery.trim().length >= 2 && (
-            <div className="absolute left-0 right-0 mt-2 bg-white rounded-xl border border-slate-200 shadow-dropdown py-2 z-50 animate-in fade-in-50 duration-150">
-              <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                <span>Matching Students</span>
-                {isSearching && <span className="animate-spin text-xs text-purple-600">⟳</span>}
-              </div>
-              {searchResults.length === 0 && !isSearching ? (
-                <div className="px-4 py-6 text-center text-xs text-slate-400">
-                  No students found for "{searchQuery}".
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {searchResults.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => {
-                        setSearchFocused(false);
-                        setSearchQuery("");
-                        navigate(`/students/${s.id}`);
-                      }}
-                      className="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 flex items-center justify-between group transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200/70 shrink-0">
-                          {s.fullName[0]}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-slate-900 truncate group-hover:text-purple-600">
-                            {s.fullName}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-mono truncate">
-                            {s.registerNumber} · Year {s.year} ({s.section})
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {s.latestRisk && <RiskDot level={s.latestRisk.riskLevel} compact />}
-                        <ArrowRight size={13} className="text-slate-400 group-hover:text-purple-600 transition-colors" />
-                      </div>
-                    </button>
-                  ))}
-                  <div className="p-2 bg-slate-50/50 text-center">
-                    <button
-                      onClick={() => {
-                        setSearchFocused(false);
-                        navigate(`/students?search=${encodeURIComponent(searchQuery)}`);
-                      }}
-                      className="text-xs font-medium text-purple-600 hover:text-purple-700 hover:underline"
-                    >
-                      View all results in Directory →
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          </button>
         </div>
 
         {/* Right Actions & Utilities */}
-        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3.5" ref={ref}>
-          {/* Mobile Search Toggle */}
-          <div className="md:hidden">
+        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0" ref={ref}>
+          {/* Quick Search Button (Mobile view or quick click) */}
+          <div className="shrink-0 md:hidden">
             <button
-              onClick={() => setMobileSearchOpen((prev) => !prev)}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors"
-              aria-label="Search"
+              onClick={() => setIsSearchLayerOpen(true)}
+              id="header_search_btn"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-purple-700 hover:border-purple-200/80 border border-transparent transition-all shrink-0 cursor-pointer active:scale-95"
+              aria-label="Open Search Layer"
+              title="Search students & records (⌘K)"
             >
-              {mobileSearchOpen ? <X size={18} /> : <Search size={18} />}
+              <Search size={18} />
             </button>
           </div>
 
-          {/* Fast Role Switcher Pills (Desktop only) */}
-          <div className="hidden lg:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-            <button
-              onClick={() => handleSwitchUser("student1@university.edu")}
-              className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer ${
-                user?.role === "STUDENT"
-                  ? "bg-white text-slate-900 font-semibold shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 font-medium"
-              }`}
-            >
-              Student
-            </button>
-            <button
-              onClick={() => handleSwitchUser("mentor1@university.edu")}
-              className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer ${
-                user?.role === "MENTOR"
-                  ? "bg-white text-slate-900 font-semibold shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 font-medium"
-              }`}
-            >
-              Faculty Advisor
-            </button>
-            <button
-              onClick={() => handleSwitchUser("hod@university.edu")}
-              className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer ${
-                user?.role === "HOD"
-                  ? "bg-white text-slate-900 font-semibold shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 font-medium"
-              }`}
-            >
-              HOD
-            </button>
-          </div>
-
-          {/* Quick Log Meeting CTA for Mentors */}
-          {user?.role === "MENTOR" && (
-            <button
-              onClick={() => navigate("/meetings")}
-              className="hidden sm:inline-flex items-center gap-1.5 btn-primary text-xs py-1.5 px-3 shadow-xs cursor-pointer"
-            >
-              <Plus size={14} /> Record Session
-            </button>
-          )}
-
-          {/* Quick Switch Demo Persona Dropdown (Desktop) */}
-          <div className="relative hidden md:block">
+          {/* Quick Switch Demo Persona Dropdown (Desktop screens) */}
+          <div className="relative hidden lg:block shrink-0">
             <button
               onClick={() => setSwitchOpen((o) => !o)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+              className="h-9 flex items-center gap-1.5 px-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
               title="Fast switch between demo roles"
             >
-              <UserCheck size={13} className="text-slate-500" />
-              <span className="truncate max-w-[100px]">{user?.role}</span>
+              <UserCheck size={13} className="text-purple-600" />
+              <span className="truncate max-w-[85px]">{user?.role}</span>
               <ChevronDown size={12} className="text-slate-400" />
             </button>
 
             {switchOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-dropdown py-2 z-50">
+              <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-xl shadow-dropdown py-2 z-50">
                 <div className="px-3.5 py-2 border-b border-slate-100">
                   <p className="text-xs font-semibold text-slate-900">Switch Persona</p>
                   <p className="text-[11px] text-slate-500">Instant test accounts</p>
@@ -320,11 +226,23 @@ export function Header() {
             )}
           </div>
 
+          {/* Platform Intro Tour Button */}
+          <button
+            onClick={openIntro}
+            id="header_platform_tour_btn"
+            className="hidden xl:inline-flex items-center gap-1.5 h-9 px-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200/80 text-xs font-semibold transition-all cursor-pointer shadow-2xs shrink-0"
+            title="Explore MentorHUB Platform Tour & Architecture"
+            aria-label="Platform Tour"
+          >
+            <Sparkles size={14} className="text-purple-600 shrink-0" />
+            <span>Tour</span>
+          </button>
+
           {/* Direct Messaging Link */}
           <Link
             to="/messages"
             id="header_messages_link"
-            className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+            className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent hover:border-slate-200 transition-all cursor-pointer shrink-0 active:scale-95"
             aria-label="Direct Messages"
             title="Advisory & Peer Messages"
           >
@@ -332,20 +250,22 @@ export function Header() {
           </Link>
 
           {/* Notifications Popover */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               onClick={() => setOpen((o) => !o)}
-              className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+              id="header_notifications_btn"
+              className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent hover:border-slate-200 transition-all cursor-pointer shrink-0 active:scale-95"
               aria-label="Notifications"
+              title="Notifications"
             >
               <Bell size={18} />
               {notifications.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-purple-600 ring-2 ring-white" />
+                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-purple-600 ring-2 ring-white" />
               )}
             </button>
 
             {open && (
-              <div className="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white rounded-xl border border-slate-200 shadow-dropdown py-2 z-50 max-h-[400px] flex flex-col">
+              <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-24px)] bg-white rounded-xl border border-slate-200 shadow-dropdown py-2 z-50 max-h-[400px] flex flex-col">
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
                   <div className="flex items-center gap-2">
                     <p className="text-xs font-semibold text-slate-900">Notifications</p>
@@ -394,23 +314,21 @@ export function Header() {
           </div>
 
           {/* User Profile Avatar Dropdown */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               onClick={() => setProfileOpen((o) => !o)}
-              className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              id="header_profile_btn"
+              className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all cursor-pointer shrink-0 active:scale-95"
+              aria-label="User Profile Menu"
+              title={`Profile (${user?.email})`}
             >
-              <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center text-xs font-bold shadow-2xs">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-700 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shadow-2xs ring-1 ring-purple-600/20 shrink-0 select-none">
                 {user?.email?.[0]?.toUpperCase()}
               </div>
-              <div className="hidden lg:block text-left">
-                <p className="text-xs font-semibold text-slate-900 truncate max-w-[90px]">{user?.email.split("@")[0]}</p>
-                <p className="text-[10px] text-slate-500 uppercase">{user?.role}</p>
-              </div>
-              <ChevronDown size={12} className="text-slate-400 hidden lg:block" />
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl border border-slate-200 shadow-dropdown py-1.5 z-50">
+              <div className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-24px)] bg-white rounded-xl border border-slate-200 shadow-dropdown py-1.5 z-50">
                 <div className="px-4 py-2.5 border-b border-slate-100">
                   <p className="text-xs font-semibold text-slate-900 truncate">{user?.email}</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">Role: {user?.role}</p>
@@ -425,6 +343,15 @@ export function Header() {
                   >
                     <User size={14} className="text-purple-600" /> My Profile
                   </Link>
+                  <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      openIntro();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Sparkles size={14} className="text-purple-600" /> Platform Tour & Intro
+                  </button>
                   <button
                     onClick={() => {
                       setProfileOpen(false);
@@ -455,46 +382,228 @@ export function Header() {
         </div>
       </header>
 
-      {/* Mobile Search Overlay if open */}
-      {mobileSearchOpen && (
-        <div className="md:hidden bg-white px-4 py-3 border-b border-slate-200 shadow-sm z-20 animate-in slide-in-from-top-2 duration-150">
-          <div className="relative flex items-center">
-            <Search size={15} className="absolute left-3 text-slate-400 pointer-events-none" />
-            <input
-              autoFocus
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search students, reg. no, or emails..."
-              className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-600 focus:bg-white text-slate-900"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setMobileSearchOpen(false);
-                  navigate(`/students?search=${encodeURIComponent(searchQuery)}`);
-                }
-              }}
-            />
-          </div>
-          {searchQuery.trim().length >= 2 && searchResults.length > 0 && (
-            <div className="mt-2 divide-y divide-slate-100 max-h-48 overflow-y-auto">
-              {searchResults.map((s) => (
+      {/* Interactive Global Search Layer Modal */}
+      {isSearchLayerOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-start justify-center p-3 sm:p-4 md:p-6 pt-12 sm:pt-20 animate-in fade-in duration-150"
+          onClick={() => setIsSearchLayerOpen(false)}
+        >
+          <div
+            className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Search Input Bar */}
+            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-200/90 bg-slate-50/70">
+              <Search size={18} className="text-purple-600 shrink-0" />
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search students, reg. number, department, email..."
+                className="w-full text-sm bg-transparent border-none focus:outline-none text-slate-900 placeholder:text-slate-400 font-medium"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchQuery.trim()) {
+                    setIsSearchLayerOpen(false);
+                    navigate(`/students?search=${encodeURIComponent(searchQuery)}`);
+                  }
+                  if (e.key === "Escape") {
+                    setIsSearchLayerOpen(false);
+                  }
+                }}
+              />
+              {searchQuery && (
                 <button
-                  key={s.id}
-                  onClick={() => {
-                    setMobileSearchOpen(false);
-                    setSearchQuery("");
-                    navigate(`/students/${s.id}`);
-                  }}
-                  className="w-full text-left py-2 px-1 flex items-center justify-between text-xs"
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 cursor-pointer shrink-0"
+                  aria-label="Clear query"
                 >
-                  <div>
-                    <p className="font-semibold text-slate-900">{s.fullName}</p>
-                    <p className="text-[10px] text-slate-400">{s.registerNumber}</p>
-                  </div>
-                  <ArrowRight size={12} className="text-slate-400" />
+                  <X size={15} />
                 </button>
-              ))}
+              )}
+              <button
+                type="button"
+                onClick={() => setIsSearchLayerOpen(false)}
+                className="px-2 py-1 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-200/60 hover:bg-slate-200 transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                aria-label="Close search layer"
+              >
+                <kbd className="font-mono text-[10px]">ESC</kbd>
+                <X size={13} />
+              </button>
             </div>
-          )}
+
+            {/* Results or Quick Links */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              {/* Category Quick Filter Chips */}
+              <div className="flex items-center gap-1.5 pb-1 overflow-x-auto text-[11px] shrink-0">
+                <span className="text-slate-400 font-medium pl-1 pr-0.5">Filter:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold border border-purple-200/80">
+                  All Records
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchLayerOpen(false);
+                    navigate("/students");
+                  }}
+                  className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium hover:bg-slate-200/70 cursor-pointer"
+                >
+                  Students
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchLayerOpen(false);
+                    navigate("/meetings");
+                  }}
+                  className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium hover:bg-slate-200/70 cursor-pointer"
+                >
+                  Advisory Notes
+                </button>
+              </div>
+
+              {/* Active Search Results */}
+              {searchQuery.trim().length >= 2 ? (
+                <div>
+                  <div className="px-2 py-1 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <span>Matching Students</span>
+                    {isSearching && <span className="text-purple-600 font-normal normal-case">Searching...</span>}
+                  </div>
+
+                  {searchResults.length === 0 && !isSearching ? (
+                    <div className="py-8 text-center">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2 text-slate-400">
+                        <Search size={18} />
+                      </div>
+                      <p className="text-sm font-medium text-slate-700">No students found</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        No students match "{searchQuery}". Try searching by name or register number.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1 mt-1">
+                      {searchResults.map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => {
+                            setIsSearchLayerOpen(false);
+                            setSearchQuery("");
+                            navigate(`/students/${s.id}`);
+                          }}
+                          className="w-full text-left p-2.5 rounded-xl hover:bg-slate-100/80 flex items-center justify-between group transition-all border border-transparent hover:border-slate-200/80 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-700 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
+                              {s.fullName[0]}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-900 truncate group-hover:text-purple-700">
+                                {s.fullName}
+                              </p>
+                              <p className="text-[11px] text-slate-500 font-mono truncate">
+                                {s.registerNumber}
+                                {s.department?.name ? ` · ${s.department.name}` : ""} · Year {s.year} ({s.section})
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2.5 shrink-0">
+                            {s.latestRisk && <RiskDot level={s.latestRisk.riskLevel} compact />}
+                            <span className="text-[11px] font-medium text-purple-600 group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+                              View Profile <ArrowRight size={12} />
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+
+                      <div className="pt-2 border-t border-slate-100 mt-2">
+                        <button
+                          onClick={() => {
+                            setIsSearchLayerOpen(false);
+                            navigate(`/students?search=${encodeURIComponent(searchQuery)}`);
+                          }}
+                          className="w-full py-2 px-3 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors text-center cursor-pointer"
+                        >
+                          View all results in Mentee Directory →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Empty query state: Quick actions & common links */
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <p className="px-2 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                      Quick Platform Destinations
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                      <button
+                        onClick={() => {
+                          setIsSearchLayerOpen(false);
+                          navigate("/students");
+                        }}
+                        className="p-2.5 rounded-xl border border-slate-200/80 hover:border-purple-300 hover:bg-purple-50/50 text-left transition-all group cursor-pointer"
+                      >
+                        <p className="text-xs font-semibold text-slate-800 group-hover:text-purple-700">
+                          Mentee Directory
+                        </p>
+                        <p className="text-[11px] text-slate-500">All assigned student records</p>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsSearchLayerOpen(false);
+                          navigate("/meetings");
+                        }}
+                        className="p-2.5 rounded-xl border border-slate-200/80 hover:border-purple-300 hover:bg-purple-50/50 text-left transition-all group cursor-pointer"
+                      >
+                        <p className="text-xs font-semibold text-slate-800 group-hover:text-purple-700">
+                          Advisory Meetings
+                        </p>
+                        <p className="text-[11px] text-slate-500">Log or schedule a session</p>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsSearchLayerOpen(false);
+                          navigate("/ai-mentor");
+                        }}
+                        className="p-2.5 rounded-xl border border-slate-200/80 hover:border-purple-300 hover:bg-purple-50/50 text-left transition-all group cursor-pointer"
+                      >
+                        <p className="text-xs font-semibold text-slate-800 group-hover:text-purple-700">
+                          AI Mentor Assistant
+                        </p>
+                        <p className="text-[11px] text-slate-500">Ask academic & career insights</p>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsSearchLayerOpen(false);
+                          navigate("/actions");
+                        }}
+                        className="p-2.5 rounded-xl border border-slate-200/80 hover:border-purple-300 hover:bg-purple-50/50 text-left transition-all group cursor-pointer"
+                      >
+                        <p className="text-xs font-semibold text-slate-800 group-hover:text-purple-700">
+                          Tasks & Actions
+                        </p>
+                        <p className="text-[11px] text-slate-500">Follow-up checklist</p>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Keyboard Hint Footer */}
+            <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between text-[11px] text-slate-400">
+              <div className="flex items-center gap-3">
+                <span>
+                  Press <kbd className="font-mono bg-white border border-slate-200 px-1 py-0.5 rounded text-slate-600">↵ Enter</kbd> to search directory
+                </span>
+                <span>
+                  <kbd className="font-mono bg-white border border-slate-200 px-1 py-0.5 rounded text-slate-600">ESC</kbd> to close
+                </span>
+              </div>
+              <span className="text-purple-600 font-medium hidden sm:inline">MentorHUB Instant Search</span>
+            </div>
+          </div>
         </div>
       )}
 

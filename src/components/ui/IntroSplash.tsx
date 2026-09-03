@@ -195,15 +195,23 @@ export function IntroSplash({ onComplete, forceShow = false }: IntroSplashProps)
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.5 }}
-        className="relative z-10 flex items-center justify-between w-full max-w-md text-[11px] text-white/30 font-mono"
+        className="relative z-10 flex flex-col sm:flex-row items-center justify-between w-full max-w-lg text-[11px] text-white/50 font-mono gap-3"
       >
-        <span className="flex items-center gap-1.5">
-          <Sparkles size={12} className="text-purple-400/70" />
-          <span>v2.5.0 AI CORE</span>
-        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.dispatchEvent(new CustomEvent("open-platform-intro"));
+            handleFinish();
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-900/40 hover:bg-purple-800/60 border border-purple-500/30 text-purple-200 transition-all cursor-pointer text-[10px]"
+        >
+          <Sparkles size={11} className="text-purple-400" />
+          <span>Explore Interactive Platform Tour</span>
+        </button>
 
-        <span className="inline-flex items-center gap-1 text-purple-300/50 hover:text-purple-200 transition-colors">
-          <span>Click anywhere to continue</span>
+        <span className="inline-flex items-center gap-1 text-purple-300/70 hover:text-purple-200 transition-colors">
+          <span>Click anywhere to enter</span>
           <ArrowRight size={11} />
         </span>
       </motion.div>

@@ -21,16 +21,25 @@ export function MentorHubEmblemSvg({
 }: {
   className?: string;
 }) {
+  // Generate unique gradient IDs to prevent SVG ID collisions across instances
+  const rawId = React.useId();
+  const id = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const mainGradId = `mHubMainGrad_${id}`;
+  const figGradId = `mHubFigGrad_${id}`;
+  const gleamId = `mHubGleam_${id}`;
+
   return (
     <svg
       viewBox="0 0 100 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`${className} overflow-visible`}
+      className={`${className} block shrink-0 overflow-visible`}
+      width="100%"
+      height="100%"
     >
       <defs>
         {/* Vibrant Gradient for M shape */}
-        <linearGradient id="mHubMainGradient" x1="18" y1="20" x2="82" y2="82" gradientUnits="userSpaceOnUse">
+        <linearGradient id={mainGradId} x1="18" y1="20" x2="82" y2="82" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#C084FC" />
           <stop offset="35%" stopColor="#A855F7" />
           <stop offset="70%" stopColor="#7E22CE" />
@@ -38,14 +47,14 @@ export function MentorHubEmblemSvg({
         </linearGradient>
 
         {/* Head and Bust Figure Gradient */}
-        <linearGradient id="mHubFigureGradient" x1="50" y1="16" x2="50" y2="52" gradientUnits="userSpaceOnUse">
+        <linearGradient id={figGradId} x1="50" y1="16" x2="50" y2="52" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#D8B4FE" />
           <stop offset="45%" stopColor="#A855F7" />
           <stop offset="100%" stopColor="#7E22CE" />
         </linearGradient>
 
         {/* Top Edge Specular Lighting */}
-        <linearGradient id="mHubGleam" x1="20" y1="22" x2="80" y2="40" gradientUnits="userSpaceOnUse">
+        <linearGradient id={gleamId} x1="20" y1="22" x2="80" y2="40" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.4" />
           <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
         </linearGradient>
@@ -68,13 +77,14 @@ export function MentorHubEmblemSvg({
            C 36.5 77.5, 33.5 80, 29.5 80 
            C 25.5 80, 22 77.5, 22 74 
            Z"
-        fill="url(#mHubMainGradient)"
+        fill={`url(#${mainGradId})`}
+        style={{ fill: `url(#${mainGradId})` }}
       />
 
       {/* Subtle Specular Top Reflection Accent */}
       <path
         d="M 23 29 C 23 25.5, 26 23.5, 29.5 25 L 50 49 L 70.5 25 C 74 23.5, 77 25.5, 77 29"
-        stroke="url(#mHubGleam)"
+        stroke={`url(#${gleamId})`}
         strokeWidth="2.2"
         strokeLinecap="round"
       />
@@ -84,14 +94,15 @@ export function MentorHubEmblemSvg({
         cx="50"
         cy="26"
         r="11.5"
-        fill="url(#mHubFigureGradient)"
+        fill={`url(#${figGradId})`}
+        style={{ fill: `url(#${figGradId})` }}
       />
       {/* Subtle Head Ring Highlight */}
       <circle
         cx="50"
         cy="26"
         r="11.5"
-        stroke="rgba(255,255,255,0.25)"
+        stroke="rgba(255,255,255,0.3)"
         strokeWidth="1"
       />
 
@@ -101,14 +112,15 @@ export function MentorHubEmblemSvg({
            C 41 33.5, 59 33.5, 62.5 37.5 
            L 50 50 
            Z"
-        fill="url(#mHubFigureGradient)"
+        fill={`url(#${figGradId})`}
+        style={{ fill: `url(#${figGradId})` }}
         opacity="0.95"
       />
 
       {/* Three Horizontal Dialogue Dots on Right Arm */}
-      <circle cx="67.5" cy="34" r="2.2" fill="#0B0817" />
-      <circle cx="72.5" cy="34" r="2.2" fill="#0B0817" />
-      <circle cx="77.5" cy="34" r="2.2" fill="#0B0817" />
+      <circle cx="67" cy="34" r="2.2" fill="#0B0817" />
+      <circle cx="71.5" cy="34" r="2.2" fill="#0B0817" />
+      <circle cx="76" cy="34" r="2.2" fill="#0B0817" />
     </svg>
   );
 }
@@ -127,9 +139,9 @@ export function MentorHubSquareBox({
   animate?: boolean;
 }) {
   const boxSizes = {
-    xs: "w-7 h-7 rounded-lg p-1",
+    xs: "w-8 h-8 rounded-lg p-1",
     sm: "w-9 h-9 rounded-xl p-1.5",
-    md: "w-11 h-11 rounded-xl p-2",
+    md: "w-10 h-10 rounded-xl p-2",
     lg: "w-14 h-14 rounded-2xl p-2.5",
     xl: "w-20 h-20 rounded-2xl p-3.5",
     hero: "w-28 h-28 md:w-32 md:h-32 rounded-3xl p-5",
@@ -141,11 +153,11 @@ export function MentorHubSquareBox({
         <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-500 to-indigo-600 opacity-50 blur-md animate-pulse pointer-events-none" />
       )}
       <div
-        className={`relative aspect-square flex items-center justify-center bg-gradient-to-b from-[#160E29] via-[#0D0818] to-[#06030B] border border-purple-500/30 shadow-md shadow-purple-950/40 ${boxSizes[size]}`}
+        className={`relative aspect-square flex items-center justify-center bg-gradient-to-b from-[#160E29] via-[#0D0818] to-[#06030B] border border-purple-500/40 shadow-xs ${boxSizes[size]}`}
       >
         {/* Subtle Inner Glow Rim */}
         <div className="absolute inset-0 rounded-[inherit] bg-gradient-to-b from-purple-400/10 to-transparent pointer-events-none" />
-        <MentorHubEmblemSvg className="w-full h-full drop-shadow-sm" />
+        <MentorHubEmblemSvg className="w-full h-full" />
       </div>
     </div>
   );
@@ -196,9 +208,9 @@ export function MentorHubLogo({
       <MentorHubSquareBox size={size} animate={animate} />
 
       {showText && (
-        <div className="flex flex-col justify-center min-w-0">
+        <div className="flex flex-col justify-center shrink-0">
           {/* Main Wordmark: "MentorHUB" */}
-          <div className="flex items-baseline leading-none tracking-tight">
+          <div className="flex items-center leading-none tracking-tight shrink-0 whitespace-nowrap">
             <span
               className={`font-display font-black ${s.text} ${
                 isDark ? "text-white" : "text-[#0B0817]"
@@ -207,7 +219,11 @@ export function MentorHubLogo({
               Mentor
             </span>
             <span
-              className={`font-display font-black ${s.hub} text-transparent bg-clip-text bg-gradient-to-r from-[#A855F7] via-[#C084FC] to-[#D8B4FE]`}
+              className={`font-display font-black ${s.hub} text-transparent bg-clip-text ${
+                isDark
+                  ? "bg-gradient-to-r from-[#C084FC] via-[#D8B4FE] to-white"
+                  : "bg-gradient-to-r from-[#7E22CE] via-[#9333EA] to-[#6B21A8]"
+              }`}
             >
               HUB
             </span>

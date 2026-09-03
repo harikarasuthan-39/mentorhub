@@ -3,6 +3,15 @@ import { asyncHandler } from "../utils/asyncHandler";
 import * as studentService from "../services/studentService";
 import { createStudentSchema, updateStudentSchema } from "../validators/studentValidators";
 import { logAudit } from "../middleware/audit";
+import { ApiError } from "../utils/ApiError";
+
+export const getMe = asyncHandler(async (req: Request, res: Response) => {
+  if (req.user!.role !== "STUDENT") {
+    throw ApiError.badRequest("Only students can access /students/me");
+  }
+  const student = await studentService.getStudentByUserId(req.user!.userId);
+  res.json({ success: true, data: student });
+});
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const { search, departmentId, year, section, mentorId, riskLevel, page, pageSize } = req.query;

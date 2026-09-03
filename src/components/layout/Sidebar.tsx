@@ -14,8 +14,10 @@ import {
   TrendingUp,
   MessageSquare,
   User,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useIntro } from "../../context/IntroContext";
 import { MentorHubLogo } from "../ui/MentorHubLogo";
 
 const NAV = {
@@ -71,6 +73,7 @@ const ROLE_INFO: Record<string, { label: string; badge: string; color: string }>
 
 export function Sidebar() {
   const { user } = useAuth();
+  const { openIntro } = useIntro();
   if (!user) return null;
   const items = NAV[user.role] || NAV.STUDENT;
   const roleMeta = ROLE_INFO[user.role] || ROLE_INFO.MENTOR;
@@ -78,7 +81,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 shrink-0 bg-[#0F172A] text-slate-200 flex flex-col h-screen sticky top-0 border-r border-slate-800 shadow-panel z-20">
       {/* Brand Header */}
-      <div className="px-5 h-18 flex items-center justify-between border-b border-slate-800/90 bg-[#0F172A]">
+      <div className="px-5 h-16 flex items-center justify-between border-b border-slate-800/90 bg-[#0F172A]">
         <MentorHubLogo size="md" theme="dark" animate={false} />
       </div>
 
@@ -146,6 +149,23 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* Platform Tour & Intro CTA */}
+      <div className="px-3 py-2 border-t border-slate-800/60">
+        <button
+          onClick={openIntro}
+          id="sidebar_platform_tour_btn"
+          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-purple-300 bg-purple-950/40 hover:bg-purple-900/50 border border-purple-800/40 transition-all group cursor-pointer shadow-xs"
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles size={14} className="text-purple-400 group-hover:scale-110 transition-transform" />
+            <span>Platform Tour & Guide</span>
+          </div>
+          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-200">
+            INFO
+          </span>
+        </button>
+      </div>
 
       {/* System Status Footer */}
       <div className="p-3 border-t border-slate-800/80">
