@@ -6,8 +6,9 @@ export interface AuthUser {
   id: string;
   email: string;
   role: Role;
-  mentor?: { id: string; fullName: string; departmentId: string } | null;
-  student?: { id: string; fullName: string } | null;
+  profilePicture?: string | null;
+  mentor?: { id: string; fullName: string; departmentId: string; profilePicture?: string | null } | null;
+  student?: { id: string; fullName: string; profilePicture?: string | null } | null;
 }
 
 export interface Department {
@@ -21,6 +22,7 @@ export interface Mentor {
   fullName: string;
   employeeId: string;
   departmentId: string;
+  profilePicture?: string | null;
 }
 
 export interface RiskAssessment {
@@ -35,6 +37,7 @@ export interface Student {
   id: string;
   fullName: string;
   registerNumber: string;
+  profilePicture?: string | null;
   year: string;
   section: string;
   departmentId: string;

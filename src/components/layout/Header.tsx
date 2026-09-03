@@ -23,6 +23,7 @@ import { AppNotification, Student } from "../../types";
 import { RiskDot } from "../ui/RiskSeal";
 import { MentorHubLogo } from "../ui/MentorHubLogo";
 import { MobileNavDrawer } from "./MobileNavDrawer";
+import { getUserAvatar } from "../../utils/avatar";
 
 const DEMO_USERS = [
   {
@@ -52,6 +53,12 @@ export function Header() {
   const { user, logout, login } = useAuth();
   const { openIntro } = useIntro();
   const navigate = useNavigate();
+
+  const userProfilePicture =
+    user?.profilePicture ||
+    user?.student?.profilePicture ||
+    user?.mentor?.profilePicture ||
+    getUserAvatar(user?.email, user?.role);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -322,16 +329,33 @@ export function Header() {
               aria-label="User Profile Menu"
               title={`Profile (${user?.email})`}
             >
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-700 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shadow-2xs ring-1 ring-purple-600/20 shrink-0 select-none">
-                {user?.email?.[0]?.toUpperCase()}
+              <div className="w-7 h-7 rounded-lg overflow-hidden ring-1 ring-slate-200 shadow-2xs shrink-0 bg-slate-100 flex items-center justify-center">
+                <img
+                  src={userProfilePicture}
+                  alt={user?.student?.fullName || user?.mentor?.fullName || user?.email || "User profile"}
+                  className="w-full h-full object-cover object-center"
+                  referrerPolicy="no-referrer"
+                />
               </div>
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-24px)] bg-white rounded-xl border border-slate-200 shadow-dropdown py-1.5 z-50">
-                <div className="px-4 py-2.5 border-b border-slate-100">
-                  <p className="text-xs font-semibold text-slate-900 truncate">{user?.email}</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Role: {user?.role}</p>
+              <div className="absolute right-0 mt-2 w-60 max-w-[calc(100vw-24px)] bg-white rounded-xl border border-slate-200 shadow-dropdown py-1.5 z-50">
+                <div className="px-3.5 py-2.5 border-b border-slate-100 flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 ring-1 ring-slate-200/80 bg-slate-100">
+                    <img
+                      src={userProfilePicture}
+                      alt={user?.email || "User avatar"}
+                      className="w-full h-full object-cover object-center"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-slate-900 truncate">
+                      {user?.student?.fullName || user?.mentor?.fullName || user?.email}
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 truncate font-medium">Role: {user?.role}</p>
+                  </div>
                 </div>
 
                 <div className="p-1">

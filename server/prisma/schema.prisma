@@ -109,6 +109,7 @@ model User {
   email        String   @unique
   passwordHash String
   role         Role
+  profilePicture String?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -131,6 +132,20 @@ model Mentor {
   departmentId String
   department   Department @relation(fields: [departmentId], references: [id])
   phone        String?
+  profilePicture String?
+  qualification String?
+  specialization String?
+  experience   String?
+  dateOfJoining DateTime?
+  employmentStatus String?
+  cabinNumber  String?
+  researchInterests String[] @default([])
+  education    String?
+  awards       String[] @default([])
+  address      String?
+  city         String?
+  state        String?
+  bio          String?
   createdAt    DateTime @default(now())
 
   students     Student[]
@@ -149,8 +164,16 @@ model Student {
 
   fullName             String
   registerNumber       String   @unique
+  admissionNumber      String?
+  admissionYear        Int?
+  academicYear         String?
+  dateOfAdmission      DateTime?
+  admissionCategory    String?
+  degree               String?
+  batch                String?
   year                 String
   section              String
+  semester             Int?
   departmentId         String
   department           Department @relation(fields: [departmentId], references: [id])
   mentorId             String
@@ -161,7 +184,31 @@ model Student {
   email                String?
   phone                String?
   dateOfBirth          DateTime?
-  admissionYear         Int?
+  gender               String?
+  address              String?
+  city                 String?
+  state                String?
+  zipCode              String?
+  emergencyContactName String?
+  emergencyContactRelation String?
+  emergencyContactPhone String?
+  emergencyContact     String?
+  careerGoal           String?
+  targetRole           String?
+  skills               String[] @default([])
+  certifications       String[] @default([])
+  interests            String[] @default([])
+  githubUrl            String?
+  linkedinUrl          String?
+  portfolioUrl         String?
+  resumeUrl            String?
+  bio                  String?
+  profilePicture       String?
+
+  bankName             String?
+  accountHolderName    String?
+  accountNumber        String?
+  ifscCode             String?
 
   attendancePercentage Float    @default(100)
   cgpa                 Float    @default(0)
@@ -342,4 +389,20 @@ model AuditLog {
 
   @@index([userId])
   @@index([entity])
+}
+
+model Message {
+  id            String   @id @default(cuid())
+  senderId      String
+  senderName    String
+  senderRole    String
+  recipientId   String
+  recipientName String
+  recipientRole String
+  content       String
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([senderId])
+  @@index([recipientId])
 }

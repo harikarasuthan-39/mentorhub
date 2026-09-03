@@ -11,7 +11,8 @@ export async function login(email: string, password: string) {
   if (!valid) throw ApiError.unauthorized("Invalid email or password");
 
   const token = signToken({ userId: user.id, role: user.role, email: user.email });
-  return { token, user: sanitizeUser(user) };
+  const currentUser = await getCurrentUser(user.id);
+  return { token, user: currentUser };
 }
 
 export async function registerMentorOrHod(input: {
@@ -78,6 +79,9 @@ export async function getCurrentUser(userId: string) {
         ...student,
         maskedAccountNumber: maskAccountNumber(student.accountNumber),
       };
+      if (!sanitized.profilePicture && student.profilePicture) {
+        sanitized.profilePicture = student.profilePicture;
+      }
     }
   }
 
@@ -92,6 +96,9 @@ export async function getCurrentUser(userId: string) {
       ...mentor,
       menteeCount,
     };
+    if (!sanitized.profilePicture && mentor?.profilePicture) {
+      sanitized.profilePicture = mentor.profilePicture;
+    }
   }
 
   return sanitized;
@@ -118,6 +125,13 @@ export async function changePassword(userId: string, currentPass: string, newPas
 }
 
 export async function updateOwnProfile(userId: string, role: string, data: Record<string, any>) {
+  if (data.profilePicture !== undefined) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { profilePicture: data.profilePicture },
+    });
+  }
+
   if (role === "STUDENT") {
     const student = await prisma.student.findUnique({ where: { userId } });
     if (!student) throw ApiError.notFound("Student record not found");
@@ -131,13 +145,14 @@ export async function updateOwnProfile(userId: string, role: string, data: Recor
       state: data.state ?? student.state,
       bio: data.bio ?? student.bio,
       skills: Array.isArray(data.skills) ? data.skills : student.skills,
+      profilePicture: data.profilePicture !== undefined ? data.profilePicture : student.profilePicture,
     };
 
-    const updated = await prisma.student.update({
+    await prisma.student.update({
       where: { id: student.id },
       data: allowed,
     });
-    return updated;
+    return getCurrentUser(userId);
   } else if (role === "MENTOR" || role === "HOD") {
     const mentor = await prisma.mentor.findUnique({ where: { userId } });
     if (!mentor) throw ApiError.notFound("Faculty profile not found");
@@ -150,13 +165,14 @@ export async function updateOwnProfile(userId: string, role: string, data: Recor
       city: data.city ?? mentor.city,
       state: data.state ?? mentor.state,
       bio: data.bio ?? mentor.bio,
+      profilePicture: data.profilePicture !== undefined ? data.profilePicture : mentor.profilePicture,
     };
 
-    const updated = await prisma.mentor.update({
+    await prisma.mentor.update({
       where: { id: mentor.id },
       data: allowed,
     });
-    return updated;
+    return getCurrentUser(userId);
   }
 
   throw ApiError.badRequest("Unsupported role for profile update");

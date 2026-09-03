@@ -1,37 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  User,
-  ArrowLeft,
   Mail,
   Phone,
-  Building,
-  GraduationCap,
-  Calendar,
   MapPin,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Edit3,
   Github,
   Linkedin,
   Globe,
   FileText,
-  Edit3,
-  CheckCircle2,
-  AlertCircle,
-  ShieldCheck,
-  Briefcase,
-  Users,
-  Award,
-  BookOpen,
   LogOut,
   Save,
   X,
   MessageSquare,
+  Camera,
+  Upload,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api/client";
 import { BackButton } from "../components/ui/BackButton";
+import { getUserAvatar, setUserAvatar } from "../utils/avatar";
 
 export function Profile() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser, updateUser } = useAuth();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -61,6 +55,7 @@ export function Profile() {
     resumeUrl: "",
     bio: "",
     specialization: "",
+    profilePicture: "",
   });
 
   const fetchProfile = async () => {
@@ -80,9 +75,9 @@ export function Profile() {
             address: s.address || "",
             city: s.city || "",
             state: s.state || "",
-            emergencyContactName: s.parentName || "",
-            emergencyContactRelation: "Parent",
-            emergencyContactPhone: s.parentContact || "",
+            emergencyContactName: s.emergencyContactName || s.parentName || "",
+            emergencyContactRelation: s.emergencyContactRelation || (s.parentName ? "Parent" : ""),
+            emergencyContactPhone: s.emergencyContactPhone || s.parentContact || "",
             careerGoal: s.careerGoal || "",
             targetRole: s.targetRole || "",
             skills: Array.isArray(s.skills) ? s.skills.join(", ") : "",
@@ -93,34 +88,40 @@ export function Profile() {
             resumeUrl: s.resumeUrl || "",
             bio: s.bio || "",
             specialization: "",
+            profilePicture: s.profilePicture || authUser.profilePicture || "",
           });
         }
       } else {
         // MENTOR, HOD, or ADMIN
         const mentor = authUser.mentor;
         const facultyInfo = {
-          fullName: mentor?.fullName || authUser.email?.split("@")[0] || "Faculty Member",
-          employeeId: mentor?.employeeId || "FAC-STAFF",
+          fullName: mentor?.fullName || authUser.email || "Faculty Member",
+          employeeId: mentor?.employeeId || "Not assigned",
           designation: mentor?.designation || (user.role === "HOD" ? "Head of Department" : "Faculty Advisor"),
-          department: mentor?.department?.name || "Engineering Department",
-          departmentCode: mentor?.department?.code || "DEPT",
+          department: mentor?.department?.name || "Not assigned",
+          departmentCode: mentor?.department?.code || "",
           email: mentor?.email || authUser.email,
           phone: mentor?.phone || "",
-          officeAddress: mentor?.address || "Faculty Block, Campus Office",
-          qualification: mentor?.qualification || "Ph.D. in Computer Science",
-          specialization: mentor?.specialization || "Computing Systems & Mentoring",
-          experience: "Active Faculty",
-          dateOfJoining: mentor?.createdAt ? new Date(mentor.createdAt).toLocaleDateString() : "Institutional Record",
+          profilePicture: mentor?.profilePicture || authUser.profilePicture || "",
+          officeAddress: mentor?.address || "",
+          qualification: mentor?.qualification || "",
+          specialization: mentor?.specialization || "",
+          experience: mentor?.experience || "",
+          dateOfJoining: mentor?.dateOfJoining
+            ? new Date(mentor.dateOfJoining).toLocaleDateString()
+            : mentor?.createdAt
+            ? new Date(mentor.createdAt).toLocaleDateString()
+            : "",
           assignedStudentsCount: mentor?.menteeCount || 0,
           activeMeetingsCount: 0,
-          bio: mentor?.bio || "Committed faculty mentor supporting student academic growth and career readiness.",
+          bio: mentor?.bio || "",
         };
         setMentorData(facultyInfo);
         setFormData({
-          phone: facultyInfo.phone,
-          address: facultyInfo.officeAddress,
-          city: mentor?.city || "Coimbatore",
-          state: mentor?.state || "Tamil Nadu",
+          phone: facultyInfo.phone || "",
+          address: mentor?.address || "",
+          city: mentor?.city || "",
+          state: mentor?.state || "",
           emergencyContactName: "",
           emergencyContactRelation: "",
           emergencyContactPhone: "",
@@ -132,8 +133,9 @@ export function Profile() {
           linkedinUrl: "",
           portfolioUrl: "",
           resumeUrl: "",
-          bio: facultyInfo.bio,
-          specialization: facultyInfo.specialization,
+          bio: mentor?.bio || "",
+          specialization: mentor?.specialization || "",
+          profilePicture: mentor?.profilePicture || authUser.profilePicture || "",
         });
       }
     } catch (err) {
@@ -170,12 +172,33 @@ export function Profile() {
           portfolioUrl: formData.portfolioUrl,
           resumeUrl: formData.resumeUrl,
           bio: formData.bio,
+          profilePicture: formData.profilePicture,
         });
       }
+
+      const res = await api.put("/auth/profile", {
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        bio: formData.bio,
+        specialization: formData.specialization,
+        profilePicture: formData.profilePicture,
+      });
+
+      const updatedUser = res.data?.data;
+      if (updatedUser) {
+        updateUser(updatedUser);
+      } else {
+        updateUser({ profilePicture: formData.profilePicture });
+      }
+      setUserAvatar(user?.email || "", formData.profilePicture);
+
       setSaveSuccess(true);
       setIsEditing(false);
       setTimeout(() => setSaveSuccess(false), 4000);
-      fetchProfile();
+      if (refreshUser) await refreshUser();
+      await fetchProfile();
     } catch (err: any) {
       setSaveError(err.response?.data?.message || "Failed to update profile settings.");
     } finally {
@@ -185,21 +208,25 @@ export function Profile() {
 
   if (loading) {
     return (
-      <div className="w-full flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-9 h-9 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-xs font-semibold text-slate-600">Loading verified profile records...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
       </div>
     );
   }
 
   const isStudent = user?.role === "STUDENT";
   const name = isStudent
-    ? profileData?.fullName || user?.email?.split("@")[0] || "Student"
-    : mentorData?.fullName || user?.email?.split("@")[0] || "Faculty Member";
+    ? profileData?.fullName || user?.student?.fullName || user?.email || "Student"
+    : mentorData?.fullName || user?.mentor?.fullName || user?.email || "Faculty Member";
 
-  const email = user?.email || "user@university.edu";
+  const email = user?.email || "";
+
+  const actualProfilePicture =
+    (isStudent ? profileData?.profilePicture : mentorData?.profilePicture) ||
+    user?.profilePicture ||
+    user?.student?.profilePicture ||
+    user?.mentor?.profilePicture ||
+    getUserAvatar(user?.email, user?.role);
 
   return (
     <div id="profile_page" className="w-full space-y-6 animate-in fade-in duration-200">
@@ -218,7 +245,7 @@ export function Profile() {
                 </>
               ) : (
                 <>
-                  Employee ID: <span className="font-mono font-semibold text-slate-700">{mentorData?.employeeId || "FAC-STAFF"}</span> • {mentorData?.department || "Department"}
+                  Employee ID: <span className="font-mono font-semibold text-slate-700">{mentorData?.employeeId || "Not assigned"}</span> • {mentorData?.department || "Department"}
                 </>
               )}
             </p>
@@ -255,7 +282,7 @@ export function Profile() {
       {/* Main Profile Hero Card */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {/* Cover Banner */}
-        <div className="h-28 sm:h-32 bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-900 relative flex items-start justify-end p-4 sm:p-5">
+        <div className="h-32 sm:h-36 bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-900 relative flex items-start justify-end p-4 sm:p-5">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold tracking-wider uppercase bg-white/10 backdrop-blur-md text-white border border-white/20 shadow-xs">
             <ShieldCheck size={13} className="text-purple-300" />
             {user?.role} Account
@@ -264,32 +291,44 @@ export function Profile() {
 
         {/* Profile Info & Quick Actions Row */}
         <div className="px-5 sm:px-7 pb-6 pt-0">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 -mt-12 sm:-mt-14 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-5">
               {/* Round Profile Picture - Top Layer above banner */}
-              <div className="relative z-10 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-lg bg-slate-900 flex items-center justify-center shrink-0 overflow-hidden ring-1 ring-slate-200/80">
-                <span className="font-bold text-2xl sm:text-3xl text-white select-none">
-                  {name.charAt(0).toUpperCase()}
-                </span>
+              <div className="-mt-12 sm:-mt-16 relative z-10 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden ring-1 ring-slate-200/80 group">
+                <img
+                  src={actualProfilePicture}
+                  alt={name}
+                  className="w-full h-full object-cover object-center"
+                  referrerPolicy="no-referrer"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  title="Change Profile Picture"
+                  className="absolute inset-0 bg-slate-900/40 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-xs"
+                >
+                  <Camera size={20} className="mb-0.5" />
+                  <span className="text-[10px] font-semibold">Change</span>
+                </button>
               </div>
-              <div className="sm:pt-4 space-y-1">
+              <div className="space-y-1 pb-1 pt-1 sm:pt-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-tight">
                     {name}
                   </h2>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-md border border-purple-200/70">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200/70 shrink-0">
                     <ShieldCheck size={13} className="text-purple-600" /> Verified
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-600 font-medium">
+                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-normal">
                   {isStudent
-                    ? `${profileData?.degree || "Undergraduate"} • Year ${profileData?.year || "III"}, Sec ${profileData?.section || "A"}`
+                    ? `${profileData?.degree || "Undergraduate"} • Year ${profileData?.year || "I"}, Sec ${profileData?.section || "A"}`
                     : mentorData?.designation || "Faculty Advisor"}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center shrink-0 sm:pt-4">
+            <div className="flex items-center shrink-0 sm:pb-1 w-full sm:w-auto">
               <button
                 id="btn_quick_message"
                 onClick={() => navigate("/messages")}
@@ -318,7 +357,7 @@ export function Profile() {
                     Cumulative CGPA
                   </p>
                   <p className="font-bold text-emerald-600 text-sm sm:text-base mt-1">
-                    {profileData?.cgpa !== undefined && profileData?.cgpa !== null ? `${profileData.cgpa} ` : "Not available "}
+                    {profileData?.cgpa !== undefined && profileData?.cgpa !== null ? `${profileData.cgpa} ` : "Not provided "}
                     <span className="text-xs text-slate-400 font-normal">/ 10.0</span>
                   </p>
                 </div>
@@ -327,7 +366,7 @@ export function Profile() {
                     Attendance Rate
                   </p>
                   <p className="font-bold text-purple-600 text-sm sm:text-base mt-1">
-                    {profileData?.attendancePercentage !== undefined ? `${profileData.attendancePercentage}%` : "Not available"}
+                    {profileData?.attendancePercentage !== undefined ? `${profileData.attendancePercentage}%` : "Not provided"}
                   </p>
                 </div>
                 <div className="flex flex-col justify-center sm:px-4 pt-2 sm:pt-0">
@@ -348,7 +387,7 @@ export function Profile() {
                     Employee ID
                   </p>
                   <p className="font-bold text-slate-800 text-sm sm:text-base mt-1 font-mono">
-                    {mentorData?.employeeId || "FAC-STAFF"}
+                    {mentorData?.employeeId || "Not assigned"}
                   </p>
                 </div>
                 <div className="flex flex-col justify-center sm:px-4 pt-2 sm:pt-0">
@@ -356,7 +395,7 @@ export function Profile() {
                     Department
                   </p>
                   <p className="font-bold text-purple-700 text-sm sm:text-base mt-1">
-                    {mentorData?.department || "Department"}
+                    {mentorData?.department || "Not assigned"}
                   </p>
                 </div>
                 <div className="flex flex-col justify-center sm:px-4 pt-2 sm:pt-0">
@@ -372,7 +411,7 @@ export function Profile() {
                     Experience
                   </p>
                   <p className="font-bold text-slate-800 text-sm sm:text-base mt-1">
-                    {mentorData?.experience || "Active"}
+                    {mentorData?.experience || "Not provided"}
                   </p>
                 </div>
               </div>
@@ -383,7 +422,7 @@ export function Profile() {
 
       {/* Detail Sections: 2-Column Responsive SaaS Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Left Column: Contact & Relationships */}
+        {/* Left Column: Contact & Location */}
         <div className="space-y-6 lg:col-span-1">
           {/* Contact Information */}
           <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -401,7 +440,7 @@ export function Profile() {
                     Institutional Email
                   </p>
                   <p className="text-xs sm:text-sm font-medium text-slate-800 truncate mt-0.5">
-                    {email}
+                    {email || "Not provided"}
                   </p>
                 </div>
               </div>
@@ -416,7 +455,7 @@ export function Profile() {
                     Phone Line
                   </p>
                   <p className="text-xs sm:text-sm font-medium text-slate-800 truncate mt-0.5">
-                    {formData.phone || "Not specified"}
+                    {formData.phone || "Not provided"}
                   </p>
                 </div>
               </div>
@@ -431,7 +470,7 @@ export function Profile() {
                     Address & Location
                   </p>
                   <p className="text-xs sm:text-sm font-medium text-slate-800 leading-snug mt-0.5">
-                    {formData.address}, {formData.city}, {formData.state}
+                    {[formData.address, formData.city, formData.state].filter(Boolean).join(", ") || "Not provided"}
                   </p>
                 </div>
               </div>
@@ -476,13 +515,15 @@ export function Profile() {
               </h3>
               <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-100 space-y-1">
                 <p className="text-xs sm:text-sm font-bold text-slate-800">
-                  {formData.emergencyContactName}
+                  {formData.emergencyContactName || "Not provided"}
                 </p>
-                <p className="text-[11px] text-slate-500">
-                  Relation: <span className="font-semibold text-slate-700">{formData.emergencyContactRelation}</span>
-                </p>
+                {formData.emergencyContactRelation && (
+                  <p className="text-[11px] text-slate-500">
+                    Relation: <span className="font-semibold text-slate-700">{formData.emergencyContactRelation}</span>
+                  </p>
+                )}
                 <p className="text-xs text-purple-700 font-semibold font-mono pt-0.5">
-                  {formData.emergencyContactPhone}
+                  {formData.emergencyContactPhone || "Not provided"}
                 </p>
               </div>
             </div>
@@ -507,7 +548,7 @@ export function Profile() {
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Career Goals & Technical Portfolio
               </h3>
-              
+
               {/* Target Role & Milestone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                 <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50/80 border border-slate-100 flex flex-col justify-center">
@@ -515,7 +556,7 @@ export function Profile() {
                     Target Placement Role
                   </p>
                   <p className="font-bold text-slate-800 text-xs sm:text-sm mt-1 leading-snug">
-                    {formData.targetRole || "Software Development Engineer"}
+                    {formData.targetRole || "Not specified"}
                   </p>
                 </div>
                 <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50/80 border border-slate-100 flex flex-col justify-center">
@@ -523,7 +564,7 @@ export function Profile() {
                     Primary Career Milestone
                   </p>
                   <p className="font-bold text-purple-700 text-xs sm:text-sm mt-1 leading-snug">
-                    {formData.careerGoal || "Product Engineering Track"}
+                    {formData.careerGoal || "Not specified"}
                   </p>
                 </div>
               </div>
@@ -533,16 +574,20 @@ export function Profile() {
                 <p className="text-xs font-semibold text-slate-700">
                   Verified Skills & Technologies
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {formData.skills.split(",").map((sk, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200/80 text-xs font-medium"
-                    >
-                      {sk.trim()}
-                    </span>
-                  ))}
-                </div>
+                {formData.skills ? (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.skills.split(",").map((sk, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200/80 text-xs font-medium"
+                      >
+                        {sk.trim()}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">Not provided</p>
+                )}
               </div>
 
               {/* Certifications if available */}
@@ -614,6 +659,9 @@ export function Profile() {
                       <span className="truncate font-medium flex-1">Verified Resume PDF</span>
                     </a>
                   )}
+                  {!formData.githubUrl && !formData.linkedinUrl && !formData.portfolioUrl && !formData.resumeUrl && (
+                    <p className="text-xs text-slate-400 col-span-2">No links provided</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -628,7 +676,7 @@ export function Profile() {
                     Highest Qualification
                   </p>
                   <p className="font-bold text-slate-800 text-xs sm:text-sm mt-0.5">
-                    {mentorData?.qualification}
+                    {mentorData?.qualification || "Not specified"}
                   </p>
                 </div>
                 <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50/80 border border-slate-100">
@@ -636,7 +684,7 @@ export function Profile() {
                     Research & Teaching Specialization
                   </p>
                   <p className="font-bold text-purple-700 text-xs sm:text-sm mt-0.5">
-                    {mentorData?.specialization}
+                    {mentorData?.specialization || "Not specified"}
                   </p>
                 </div>
               </div>
@@ -658,19 +706,19 @@ export function Profile() {
                 <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100">
                   <p className="text-[10px] text-slate-400 font-medium">Bank Name</p>
                   <p className="font-semibold text-slate-800 mt-0.5">
-                    {profileData?.bankName || "State Bank of India"}
+                    {profileData?.bankName || "Not provided"}
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100">
                   <p className="text-[10px] text-slate-400 font-medium">Account Number</p>
                   <p className="font-semibold text-slate-800 mt-0.5 font-mono">
-                    {profileData?.maskedAccountNumber || "XXXX XXXX 1017"}
+                    {profileData?.maskedAccountNumber || "Not provided"}
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100">
                   <p className="text-[10px] text-slate-400 font-medium">IFSC Code</p>
                   <p className="font-semibold text-slate-800 mt-0.5 font-mono">
-                    {profileData?.ifscCode || "SBIN0001248"}
+                    {profileData?.ifscCode || "Not provided"}
                   </p>
                 </div>
               </div>
@@ -692,7 +740,7 @@ export function Profile() {
                   Edit Profile Records
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Update contact details, career roadmaps, and technical links.
+                  Update your contact details, bio, and profile records stored in database.
                 </p>
               </div>
               <button
@@ -711,6 +759,65 @@ export function Profile() {
                   <span>{saveError}</span>
                 </div>
               )}
+
+              {/* Profile Picture */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                <label className="block text-xs font-semibold text-slate-700 mb-2">
+                  Profile Picture
+                </label>
+                <div className="flex items-center gap-3.5">
+                  <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-200 bg-white shrink-0">
+                    <img
+                      src={formData.profilePicture || actualProfilePicture}
+                      alt="Profile preview"
+                      className="w-full h-full object-cover object-center"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <input
+                      id="input_profile_picture"
+                      type="text"
+                      placeholder="Enter photo URL or use upload button"
+                      value={formData.profilePicture}
+                      onChange={(e) => setFormData({ ...formData, profilePicture: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-colors"
+                    />
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <label className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-md cursor-pointer transition-colors">
+                        <Upload size={12} className="text-purple-600" />
+                        <span>Upload photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = () => {
+                                if (typeof reader.result === "string") {
+                                  setFormData((prev) => ({ ...prev, profilePicture: reader.result as string }));
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                      {formData.profilePicture && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, profilePicture: "" }))}
+                          className="text-[11px] text-rose-600 hover:underline cursor-pointer"
+                        >
+                          Clear Photo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* Bio */}
               <div>
@@ -742,7 +849,7 @@ export function Profile() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    City / State
+                    City
                   </label>
                   <input
                     id="input_city"
@@ -754,19 +861,49 @@ export function Profile() {
                 </div>
               </div>
 
-              {/* Address */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Address
-                </label>
-                <input
-                  id="input_address"
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-colors"
-                />
+              {/* State & Address */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    State
+                  </label>
+                  <input
+                    id="input_state"
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Address
+                  </label>
+                  <input
+                    id="input_address"
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-colors"
+                  />
+                </div>
               </div>
+
+              {/* Faculty Specific: Specialization */}
+              {!isStudent && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Research & Teaching Specialization
+                  </label>
+                  <input
+                    id="input_specialization"
+                    type="text"
+                    value={formData.specialization}
+                    onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-colors"
+                  />
+                </div>
+              )}
 
               {isStudent && (
                 <>
@@ -806,7 +943,7 @@ export function Profile() {
                   <div className="space-y-3.5 pt-2 border-t border-slate-100">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Target Role & Career Goal
+                        Target Placement Role
                       </label>
                       <input
                         id="input_target_role"
@@ -814,7 +951,18 @@ export function Profile() {
                         value={formData.targetRole}
                         onChange={(e) => setFormData({ ...formData, targetRole: e.target.value })}
                         className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-colors"
-                        placeholder="e.g. Full Stack AI Engineer"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Career Goal / Milestone
+                      </label>
+                      <input
+                        id="input_career_goal"
+                        type="text"
+                        value={formData.careerGoal}
+                        onChange={(e) => setFormData({ ...formData, careerGoal: e.target.value })}
+                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-colors"
                       />
                     </div>
                     <div>
@@ -889,4 +1037,3 @@ export function Profile() {
   );
 }
 export default Profile;
-

@@ -76,7 +76,7 @@ export async function getStudentByUserId(userId: string) {
     where: { userId },
     include: {
       department: true,
-      mentor: { select: { id: true, fullName: true, employeeId: true, phone: true, email: true, designation: true } },
+      mentor: { select: { id: true, fullName: true, employeeId: true, phone: true, designation: true, user: { select: { email: true } } } },
       riskAssessments: { orderBy: { createdAt: "desc" }, take: 5 },
       meetings: { orderBy: { meetingDate: "desc" }, take: 10 },
       issues: { orderBy: { createdAt: "desc" }, take: 10 },
@@ -140,11 +140,11 @@ export async function getStudentFinancialDetails(user: JwtPayload, studentId: st
   }
 
   return {
-    bankName: student.bankName || "State Bank of India",
+    bankName: student.bankName || null,
     accountHolderName: student.accountHolderName || student.fullName,
-    accountNumber: student.accountNumber || "398420104821",
-    ifscCode: student.ifscCode || "SBIN0001248",
-    branch: student.branch || "University Campus Branch, Coimbatore",
+    accountNumber: student.accountNumber || null,
+    ifscCode: student.ifscCode || null,
+    branch: (student as any).branch || null,
   };
 }
 
@@ -211,6 +211,7 @@ export async function updateStudent(user: JwtPayload, studentId: string, data: R
       "resumeUrl",
       "bio",
       "interests",
+      "profilePicture",
     ];
 
     const payload: Record<string, unknown> = {};
@@ -218,6 +219,13 @@ export async function updateStudent(user: JwtPayload, studentId: string, data: R
       if (data[key] !== undefined) {
         payload[key] = data[key];
       }
+    }
+
+    if (data.profilePicture !== undefined && student.userId) {
+      await prisma.user.update({
+        where: { id: student.userId },
+        data: { profilePicture: data.profilePicture },
+      });
     }
 
     return prisma.student.update({ where: { id: studentId }, data: payload });

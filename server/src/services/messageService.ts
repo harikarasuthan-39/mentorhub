@@ -4,10 +4,10 @@ export interface MessageDTO {
   id: string;
   senderId: string;
   senderName: string;
-  senderRole: Role;
+  senderRole: string;
   recipientId: string;
   recipientName: string;
-  recipientRole: Role;
+  recipientRole: string;
   content: string;
   isRead: boolean;
   createdAt: Date;
@@ -16,7 +16,7 @@ export interface MessageDTO {
 export interface ConversationSummary {
   participantId: string;
   participantName: string;
-  participantRole: Role;
+  participantRole: string;
   participantEmail?: string;
   lastMessage: string;
   lastMessageTime: Date;

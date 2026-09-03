@@ -7,6 +7,8 @@ interface AuthContextValue {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
+  updateUser: (partial: Partial<AuthUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -17,6 +19,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return raw ? JSON.parse(raw) : null;
   });
   const [loading, setLoading] = useState(true);
+
+  const refreshUser = async () => {
+    try {
+      const token = localStorage.getItem("maa_token");
+      if (!token) return;
+      const res = await api.get("/auth/me");
+      if (res.data?.data) {
+        setUser(res.data.data);
+        localStorage.setItem("maa_user", JSON.stringify(res.data.data));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const updateUser = (partial: Partial<AuthUser>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...partial };
+      localStorage.setItem("maa_user", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  useEffect(() => {
+    const handleAvatarUpdate = (e: any) => {
+      const newUrl = e.detail?.avatarUrl || e.detail?.profilePicture;
+      if (newUrl) {
+        updateUser({ profilePicture: newUrl });
+      }
+    };
+    window.addEventListener("maa_avatar_changed", handleAvatarUpdate);
+    return () => window.removeEventListener("maa_avatar_changed", handleAvatarUpdate);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("maa_token");
@@ -52,7 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser, updateUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

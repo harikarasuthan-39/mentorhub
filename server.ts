@@ -3,10 +3,17 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import app from "./server/src/app";
 import { startScheduledJobs } from "./server/src/jobs/scheduler";
+import { seedDatabase } from "./server/src/db/seed";
 
 const PORT = 3000;
 
 async function startServer() {
+  try {
+    await seedDatabase();
+  } catch (err) {
+    console.warn("Database initialization notice:", err);
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true, host: "0.0.0.0", port: PORT },

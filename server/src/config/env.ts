@@ -5,7 +5,7 @@ export const env = {
   port: Number(process.env.PORT ?? 3000),
   nodeEnv: process.env.NODE_ENV ?? "development",
   clientUrl: process.env.CLIENT_URL ?? "http://localhost:3000",
-  databaseUrl: process.env.DATABASE_URL ?? "",
+  databaseUrl: process.env.DATABASE_URL || "postgresql://node@localhost:5432/mentorhub",
   jwtSecret: process.env.JWT_SECRET || "mentorhub_jwt_dev_secret_key_2026_secured",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
   bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS ?? 10),

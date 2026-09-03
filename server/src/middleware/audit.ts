@@ -15,7 +15,7 @@ export async function logAudit(
         action,
         entity,
         entityId,
-        metadata: metadata ?? undefined,
+        metadata: (metadata as any) ?? undefined,
         ipAddress: req.ip,
         userAgent: req.headers["user-agent"],
       },

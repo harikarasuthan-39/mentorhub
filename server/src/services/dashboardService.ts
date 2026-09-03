@@ -123,7 +123,7 @@ export async function getStudentDashboard(user: JwtPayload) {
   const student = await prisma.student.findUnique({
     where: { userId: user.userId },
     include: {
-      mentor: { select: { id: true, fullName: true, phone: true, email: true, designation: true } },
+      mentor: { select: { id: true, fullName: true, phone: true, designation: true, user: { select: { email: true } } } },
       department: true,
     },
   });
@@ -161,7 +161,15 @@ export async function getStudentDashboard(user: JwtPayload) {
       careerGoal: student.careerGoal,
       targetRole: student.targetRole,
     },
-    myMentor: student.mentor,
+    myMentor: student.mentor
+      ? {
+          id: student.mentor.id,
+          fullName: student.mentor.fullName,
+          phone: student.mentor.phone,
+          designation: student.mentor.designation,
+          email: student.mentor.user?.email || null,
+        }
+      : null,
     upcomingFollowUp: upcomingMeeting?.nextFollowUpDate ?? null,
     pendingActions: actions.filter((a: { status: string }) => a.status === "PENDING" || a.status === "IN_PROGRESS"),
     completedActions: actions.filter((a: { status: string }) => a.status === "COMPLETED"),
